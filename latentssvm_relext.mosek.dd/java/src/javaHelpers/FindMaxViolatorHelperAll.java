@@ -139,6 +139,7 @@ public class FindMaxViolatorHelperAll {
 	}
 	
 	public static void main(String args[]) throws IOException, IloException, InterruptedException, ExecutionException {
+		System.out.println("Test git");
 		String currentParametersFile = args[0];
 		String datasetFile = args[1];
 		double simFracParam = Double.parseDouble(args[2]);
