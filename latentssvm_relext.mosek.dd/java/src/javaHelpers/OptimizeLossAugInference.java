@@ -15,11 +15,12 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import edu.stanford.nlp.stats.Counter;
+import edu.stanford.nlp.util.Pair;
 import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class OptimizeLossAugInference {
 
-	static int MAX_ITERS_SUB_DESCENT = 10;
+	static int MAX_ITERS_SUB_DESCENT = 25;
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np) throws IOException, IloException, InterruptedException, ExecutionException{
@@ -57,6 +58,10 @@ public class OptimizeLossAugInference {
 		
 		//ArrayList<Region> regions = LossLagrangian.readRegionFile(regionsFile);
 		double prevFracSame = Double.NEGATIVE_INFINITY;
+		
+		double objective = 0;
+		double prevObjective = Double.POSITIVE_INFINITY;
+		
 		while(true){
 
 			long startiter = System.currentTimeMillis();
@@ -64,14 +69,18 @@ public class OptimizeLossAugInference {
 
 			//******* Loss Lag *****************************************************
 			//YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, regions, Lambda);
-			YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np);
+			Pair<ArrayList<YZPredicted>, Double> resultLoss = LossLagrangian.optLossLag(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np);
+			YtildeStar = resultLoss.first();
+			double lossObj = resultLoss.second();
 			
 			long endlosslag = System.currentTimeMillis();
 			double timelosslag = (double)(endlosslag - startiter) / 1000.0;
 			System.out.println("Ajay: Time taken loss lag : " + timelosslag + " s.");
 			
 			/// ****** Model Lag ***************************************************
-			YtildeDashStar = ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
+			Pair<ArrayList<YZPredicted>, Double> resultModel =  ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
+			YtildeDashStar = resultModel.first();
+			double modelObj = resultModel.second();
 			//YtildeDashStar = ModelLagrangian.optModelLag_lpsolve_threaded(dataset, zWeights, Lambda);
 
 			long endmodellag = System.currentTimeMillis();
@@ -80,22 +89,35 @@ public class OptimizeLossAugInference {
 			
 			double fracSame = fractionSame(YtildeStar, YtildeDashStar);
 			
+			objective = (lossObj-modelObj);
+			
 			System.out.println("-------------------------------------");
-			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame);
+			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective);
 			System.out.println("-------------------------------------");
 			
 			// Stopping condition for the subgradient descent algorithm
-			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+//			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+//				System.out.println("Met the stopping criterion. !!");
+//				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t);
+//				break; 
+//			}
+//			else{
+//				prevFracSame = fracSame;
+//				
+//			}
+
+			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.001) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("Met the stopping criterion. !!");
-				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t);
+				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
 				break; 
 			}
-			else{
-				prevFracSame = fracSame;
+			else {
+				prevObjective = objective;
 			}
+			
 				
 
-			double eta = 1.0 / Math.sqrt(t);
+			double eta = 1.0 / Math.sqrt(t) * 0.01;
 			for(int i = 0; i < dataset.size(); i ++){
 				for(int l = 1; l < zWeights.length; l ++){
 
