@@ -20,7 +20,7 @@ import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class OptimizeLossAugInference {
 
-	static int MAX_ITERS_SUB_DESCENT = 100;
+	static int MAX_ITERS_SUB_DESCENT = 25;
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np) throws IOException, IloException, InterruptedException, ExecutionException{
