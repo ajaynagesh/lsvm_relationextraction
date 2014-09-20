@@ -20,7 +20,7 @@ import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class OptimizeLossAugInference {
 
-	static int MAX_ITERS_SUB_DESCENT = 100;
+	static int MAX_ITERS_SUB_DESCENT = 25;
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np) throws IOException, IloException, InterruptedException, ExecutionException{
@@ -106,7 +106,7 @@ public class OptimizeLossAugInference {
 //				
 //			}
 
-			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) > 0.0001) { // || both YtildeStar and YtildeDashStar are equal
+			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.001) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("Met the stopping criterion. !!");
 				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
 				break; 
@@ -117,7 +117,7 @@ public class OptimizeLossAugInference {
 			
 				
 
-			double eta = 1.0 / Math.sqrt(t);
+			double eta = 1.0 / Math.sqrt(t) * 0.01;
 			for(int i = 0; i < dataset.size(); i ++){
 				for(int l = 1; l < zWeights.length; l ++){
 
