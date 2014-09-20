@@ -26,7 +26,7 @@ import edu.stanford.nlp.util.Pair;
 
 public class ModelLagrangian {
 	
-	public static ArrayList<YZPredicted> optModelLag_cplex(ArrayList<DataItem> dataset, LabelWeights [] zWeights, double Lambda[][]) throws IloException{
+	public static Pair<ArrayList<YZPredicted>, Double> optModelLag_cplex(ArrayList<DataItem> dataset, LabelWeights [] zWeights, double Lambda[][]) throws IloException{
 
 		long start = System.currentTimeMillis();
 		long curtime = System.currentTimeMillis();
@@ -34,6 +34,8 @@ public class ModelLagrangian {
 		System.err.println("Log: FindMaxViolatorHelperAll: Init -- time taken " + inittime + " s.");
 		long prevtime = curtime;
 
+		double modelObj =  0;
+		
 		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
 
 		for(int i = 0; i < dataset.size(); i++){
@@ -56,7 +58,9 @@ public class ModelLagrangian {
 			for(int y : yLabelsGold)  
 				yLabelsSetGold.add(y);
 			
-			YZPredicted yz = buildAndSolveCplexILPModel(scores, numMentions, 0, Lambda, zWeights.length, i);
+			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModel(scores, numMentions, 0, Lambda, zWeights.length, i);
+			YZPredicted yz = result.first();
+			modelObj += result.second();
 			
 			// TODO: check the ilp method once completely for the correct formulation
 
@@ -67,11 +71,11 @@ public class ModelLagrangian {
 		double totTime = (end - start) / 1000.0; 
 		System.err.println("Log: FindMaxViolatorHelperAll: Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
 
-		return YtildeDashStar;
+		return new Pair<ArrayList<YZPredicted>, Double>(YtildeDashStar, modelObj) ;
 
 	}
 	
-	static YZPredicted buildAndSolveCplexILPModel( List<Counter<Integer>> scores,
+	static Pair<YZPredicted,Double> buildAndSolveCplexILPModel( List<Counter<Integer>> scores,
 	  int numOfMentions,
 	  int nilIndex,
 	  double [][] lambda,
@@ -112,7 +116,7 @@ public class ModelLagrangian {
 				yPredicted.setCount(l, 1);
 		}
 		
-		return predictedVals;
+		return new Pair<YZPredicted, Double>(predictedVals, cplexILPModel.getObjValue());
 	}
 	
 	static void buildILPModel(IloCplex cplexILPModel, ArrayList<IloNumVar[]> hiddenvars, IloNumVar[] ytildedash, 
@@ -195,15 +199,15 @@ public class ModelLagrangian {
 			}
 		}
 		
-		ArrayList<YZPredicted> yz_cplex = ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
-		ArrayList<YZPredicted> yz_lpsolve = ModelLagrangian.optModelLag_lpsolve(dataset, zWeights, Lambda);
+		//ArrayList<YZPredicted> yz_cplex = ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
+		//ArrayList<YZPredicted> yz_lpsolve = ModelLagrangian.optModelLag_lpsolve(dataset, zWeights, Lambda);
 		
-		for(int i = 0; i < yz_cplex.size(); i ++){
-			if(! OptimizeLossAugInference.isSame(yz_cplex.get(i), yz_lpsolve.get(i))){
-				System.out.println(i + " (l) " + yz_lpsolve.get(i).yPredicted.keySet());
-				System.out.println(i + " (c) " + yz_cplex.get(i).yPredicted.keySet());
-			}
-		}
+//		for(int i = 0; i < yz_cplex.size(); i ++){
+//			if(! OptimizeLossAugInference.isSame(yz_cplex.get(i), yz_lpsolve.get(i))){
+//				System.out.println(i + " (l) " + yz_lpsolve.get(i).yPredicted.keySet());
+//				System.out.println(i + " (c) " + yz_cplex.get(i).yPredicted.keySet());
+//			}
+//		}
 	}
 	
 	// Model lagrangian using LP solve 

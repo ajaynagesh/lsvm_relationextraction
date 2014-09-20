@@ -15,11 +15,12 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import edu.stanford.nlp.stats.Counter;
+import edu.stanford.nlp.util.Pair;
 import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class OptimizeLossAugInference {
 
-	static int MAX_ITERS_SUB_DESCENT = 10;
+	static int MAX_ITERS_SUB_DESCENT = 100;
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np) throws IOException, IloException, InterruptedException, ExecutionException{
@@ -64,14 +65,18 @@ public class OptimizeLossAugInference {
 
 			//******* Loss Lag *****************************************************
 			//YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, regions, Lambda);
-			YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np);
+			Pair<ArrayList<YZPredicted>, Double> resultLoss = LossLagrangian.optLossLag(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np);
+			YtildeStar = resultLoss.first();
+			double lossObj = resultLoss.second();
 			
 			long endlosslag = System.currentTimeMillis();
 			double timelosslag = (double)(endlosslag - startiter) / 1000.0;
 			System.out.println("Ajay: Time taken loss lag : " + timelosslag + " s.");
 			
 			/// ****** Model Lag ***************************************************
-			YtildeDashStar = ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
+			Pair<ArrayList<YZPredicted>, Double> resultModel =  ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
+			YtildeDashStar = resultModel.first();
+			double modelObj = resultModel.second();
 			//YtildeDashStar = ModelLagrangian.optModelLag_lpsolve_threaded(dataset, zWeights, Lambda);
 
 			long endmodellag = System.currentTimeMillis();
@@ -81,7 +86,7 @@ public class OptimizeLossAugInference {
 			double fracSame = fractionSame(YtildeStar, YtildeDashStar);
 			
 			System.out.println("-------------------------------------");
-			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame);
+			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + (lossObj-modelObj));
 			System.out.println("-------------------------------------");
 			
 			// Stopping condition for the subgradient descent algorithm

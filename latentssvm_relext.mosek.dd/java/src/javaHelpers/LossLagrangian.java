@@ -110,7 +110,7 @@ public class LossLagrangian {
 		return new Pair<LossLagrangian.IndexPt[], LossLagrangian.IndexPt[]>(positiveIndices, negativeIndices);
 	}
 	
-	public static ArrayList<YZPredicted> optLossLag (ArrayList<DataItem> dataset, int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np){
+	public static Pair<ArrayList<YZPredicted>,Double> optLossLag (ArrayList<DataItem> dataset, int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np){
 		
 		//// IMPT NOTE: This is the 2nd type of LossLagrangian which does not need piece-wise linear approximation. 
 		//// It does a local search in the space of FPs and FNs and find the y' based on the \lambda's set from previous iterations
@@ -226,7 +226,7 @@ public class LossLagrangian {
 			
 		}
 		
-		return YtildeStar;
+		return new Pair<ArrayList<YZPredicted>, Double>(YtildeStar, currentLoss);
 
 	}
 
