@@ -58,6 +58,10 @@ public class OptimizeLossAugInference {
 		
 		//ArrayList<Region> regions = LossLagrangian.readRegionFile(regionsFile);
 		double prevFracSame = Double.NEGATIVE_INFINITY;
+		
+		double objective = 0;
+		double prevObjective = Double.POSITIVE_INFINITY;
+		
 		while(true){
 
 			long startiter = System.currentTimeMillis();
@@ -85,19 +89,32 @@ public class OptimizeLossAugInference {
 			
 			double fracSame = fractionSame(YtildeStar, YtildeDashStar);
 			
+			objective = (lossObj-modelObj);
+			
 			System.out.println("-------------------------------------");
-			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + (lossObj-modelObj));
+			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective);
 			System.out.println("-------------------------------------");
 			
 			// Stopping condition for the subgradient descent algorithm
-			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+//			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+//				System.out.println("Met the stopping criterion. !!");
+//				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t);
+//				break; 
+//			}
+//			else{
+//				prevFracSame = fracSame;
+//				
+//			}
+
+			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) > 0.0001) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("Met the stopping criterion. !!");
-				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t);
+				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
 				break; 
 			}
-			else{
-				prevFracSame = fracSame;
+			else {
+				prevObjective = objective;
 			}
+			
 				
 
 			double eta = 1.0 / Math.sqrt(t);
