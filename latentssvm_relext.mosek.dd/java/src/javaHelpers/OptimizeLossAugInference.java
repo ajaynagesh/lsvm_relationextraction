@@ -106,7 +106,7 @@ public class OptimizeLossAugInference {
 //				
 //			}
 
-			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.001) { // || both YtildeStar and YtildeDashStar are equal
+			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < fracSame) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("Met the stopping criterion. !!");
 				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
 				break; 
