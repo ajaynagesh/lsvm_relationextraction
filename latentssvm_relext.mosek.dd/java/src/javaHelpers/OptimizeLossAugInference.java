@@ -89,7 +89,7 @@ public class OptimizeLossAugInference {
 			
 			double fracSame = fractionSame(YtildeStar, YtildeDashStar);
 			
-			objective = (lossObj-modelObj);
+			objective = (lossObj + modelObj);
 			
 			System.out.println("-------------------------------------");
 			System.out.println("Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective);
@@ -106,7 +106,7 @@ public class OptimizeLossAugInference {
 //				
 //			}
 
-			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < fracSame) { // || both YtildeStar and YtildeDashStar are equal
+			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.1) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("Met the stopping criterion. !!");
 				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
 				break; 
@@ -117,7 +117,7 @@ public class OptimizeLossAugInference {
 			
 				
 
-			double eta = 1.0 / Math.sqrt(t) * 0.01;
+			double eta = 1.0 / Math.sqrt(t);
 			for(int i = 0; i < dataset.size(); i ++){
 				for(int l = 1; l < zWeights.length; l ++){
 
