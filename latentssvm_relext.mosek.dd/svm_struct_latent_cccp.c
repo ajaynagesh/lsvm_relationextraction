@@ -237,7 +237,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
   max_rho = C; 
 
-  printf("Running CCCP inner loop solver: "); fflush(stdout); 
+  printf("Running CCCP inner loop solver: \n"); fflush(stdout);
 
   time_t iter_start, iter_end;
 
