@@ -21,6 +21,121 @@ import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 public class OptimizeLossAugInference {
 
 	static int MAX_ITERS_SUB_DESCENT = 25;
+
+	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD_ADMM(ArrayList<DataItem> dataset,
+			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np, double rho) throws IOException, IloException, InterruptedException, ExecutionException{
+
+		// Initialize t = 0 and Lambda^0
+		// repeat
+		//		~Y* = optLossLag(Lambda, Y)
+		//		~Y'* = optModelLag(Lambda, X)
+		//		if (~Y* == ~Y'*)
+		//			return ~Y*
+		//		
+		//		for(i = 1 to N) {
+		//			for(l = 1 to L) {
+		//				lambda^(t+1)_i (l) = lambda^t_i (l) - eta^t (~y*_{i,l} - ~y'*_{i,l})
+		// until some stopping condition is met
+		// return ~Y*
+
+		//TODO: check if zWeights.length also includes the nil label
+		
+		ArrayList<YZPredicted> YtildeStar = null;
+		ArrayList<YZPredicted> YtildeDashStar = null;
+		double Lambda[][] = new double[dataset.size()][zWeights.length];
+		int t = 0;
+
+		// init Lambda
+		for(int i = 0; i < dataset.size(); i ++){
+			for(int l = 1; l < zWeights.length; l ++){
+				Lambda[i][l] = 0.0;
+			}
+		}
+
+		// Starting code for  threading
+
+		// A new comment to test branching
+		
+		//ArrayList<Region> regions = LossLagrangian.readRegionFile(regionsFile);
+		double prevFracSame = Double.NEGATIVE_INFINITY;
+		
+		double objective = 0;
+		double prevObjective = Double.POSITIVE_INFINITY;
+		
+		while(true){
+
+			long startiter = System.currentTimeMillis();
+			t++;
+
+			//******* Loss Lag *****************************************************
+			//YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, regions, Lambda);
+			Pair<ArrayList<YZPredicted>, Double> resultLoss = LossLagrangian.optLossLagAugmented(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho);
+			YtildeStar = resultLoss.first();
+			double lossObj = resultLoss.second();
+			
+			long endlosslag = System.currentTimeMillis();
+			double timelosslag = (double)(endlosslag - startiter) / 1000.0;
+			System.out.println("[admm] Ajay: Time taken loss lag : " + timelosslag + " s.");
+			
+			/// ****** Model Lag ***************************************************
+			Pair<ArrayList<YZPredicted>, Double> resultModel =  ModelLagrangian.optModelLagAugmented(dataset, zWeights, Lambda, YtildeStar, rho);
+			YtildeDashStar = resultModel.first();
+			double modelObj = resultModel.second();
+			//YtildeDashStar = ModelLagrangian.optModelLag_lpsolve_threaded(dataset, zWeights, Lambda);
+
+			long endmodellag = System.currentTimeMillis();
+			double timemodellag = (double) (endmodellag - endlosslag) / 1000.0;
+			System.out.println("[admm] Ajay: Time taken model lag : " + timemodellag + " s.");
+			
+			double fracSame = fractionSame(YtildeStar, YtildeDashStar);
+			
+			objective = (lossObj + modelObj);
+			
+			System.out.println("-------------------------------------");
+			System.out.println("[admm] Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective);
+			System.out.println("-------------------------------------");
+			
+			// Stopping condition for the subgradient descent algorithm
+//			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+//				System.out.println("Met the stopping criterion. !!");
+//				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t);
+//				break; 
+//			}
+//			else{
+//				prevFracSame = fracSame;
+//				
+//			}
+
+			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.1) { // || both YtildeStar and YtildeDashStar are equal
+				System.out.println("[admm] Met the stopping criterion. !!");
+				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
+				break; 
+			}
+			else {
+				prevObjective = objective;
+			}
+			
+				
+
+			double eta = 1.0 / Math.sqrt(t);
+			for(int i = 0; i < dataset.size(); i ++){
+				for(int l = 1; l < zWeights.length; l ++){
+
+					double ystar_il = YtildeStar.get(i).getYPredicted().getCount(l);
+					double ydashstar_il = YtildeDashStar.get(i).getYPredicted().getCount(l);		
+
+					Lambda[i][l] = Lambda[i][l] -  ( eta * rho * (ystar_il - ydashstar_il));
+				}
+			}
+			
+			long endIter = System.currentTimeMillis();
+			double timeiter = (double)(endIter - startiter)/ 1000.0;
+			System.out.println("[admm] Time taken for iteration " + t + " :" + timeiter + " s.");
+		}
+
+		return YtildeDashStar;
+
+	}
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np) throws IOException, IloException, InterruptedException, ExecutionException{
@@ -78,7 +193,7 @@ public class OptimizeLossAugInference {
 			System.out.println("Ajay: Time taken loss lag : " + timelosslag + " s.");
 			
 			/// ****** Model Lag ***************************************************
-			Pair<ArrayList<YZPredicted>, Double> resultModel =  ModelLagrangian.optModelLag_cplex(dataset, zWeights, Lambda);
+			Pair<ArrayList<YZPredicted>, Double> resultModel =  ModelLagrangian.optModelLag(dataset, zWeights, Lambda);
 			YtildeDashStar = resultModel.first();
 			double modelObj = resultModel.second();
 			//YtildeDashStar = ModelLagrangian.optModelLag_lpsolve_threaded(dataset, zWeights, Lambda);

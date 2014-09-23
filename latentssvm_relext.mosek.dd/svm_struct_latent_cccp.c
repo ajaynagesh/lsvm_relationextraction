@@ -70,7 +70,7 @@ double* add_list_nn(SVECTOR *a, long totwords)
 }
 
 
-SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file) {
+SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -88,7 +88,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   time_t mv_start, mv_end;
 
   time(&mv_start);
-  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file);
+  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file, rho);
   time(&mv_end);
 
 #if (DEBUG_LEVEL==1)
@@ -161,7 +161,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 }
 
 
-double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file) {
+double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho) {
   long i,j;
   double xi;
   double *alpha;
@@ -226,7 +226,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   proximal_rhs = NULL;
   cut_error = NULL; 
 
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file);
+  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
   value = margin - sprod_ns(w, new_constraint);
 	
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value;
@@ -367,7 +367,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
       }
     }
 
-    new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file);
+    new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
     value = margin - sprod_ns(w, new_constraint);
 
     /* print primal objective */
@@ -608,7 +608,7 @@ int main(int argc, char* argv[]) {
     /* cutting plane algorithm */
     time_t cp_start, cp_end;
     time(&cp_start);
-    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file);
+    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file, learn_parm.rho);
     time(&cp_end);
 
 #if(DEBUG_LEVEL==1)
@@ -727,6 +727,7 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'y': i++; learn_parm->frac_sim=atof(argv[i]); printf("Frac Sim is %g\n", learn_parm->frac_sim); break;
     case 'z': i++; strcpy(learn_parm->dataset_stats_file,argv[i]);printf("Dataset Stats file is %s\n",learn_parm->dataset_stats_file);break;
     case 'w': i++; learn_parm->Fweight=atof(argv[i]); printf("Weigting param of F is %g\n",learn_parm->Fweight);break;
+    case 'o': i++; learn_parm->rho=atof(argv[i]); printf("Rho is %g\n", learn_parm->rho); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);
       exit(0);

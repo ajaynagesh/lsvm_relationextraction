@@ -49,7 +49,37 @@ import net.sf.javailp.Term;
 import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class LossLagrangian {
+
+	static class IndexPtAugmented implements Comparable<IndexPtAugmented> {
+		int egId;
+		int label;
+		double score;
 		
+		public IndexPtAugmented(int i, int l, double lambda){
+			this.egId = i;
+			this.label = l;
+			this.score = lambda;
+		}
+		
+		public IndexPtAugmented () {
+		}
+
+		@Override
+		public int compareTo(IndexPtAugmented o) {
+			if(this.score > o.score)
+				return -1;
+			else if(this.score < o.score)
+				return 1;
+			return 0;
+		}
+			
+		
+		@Override
+		public String toString() {
+			return "(" + egId + " " + label + ") " + score;
+		}
+	}
+	
 	static class IndexPt implements Comparable<IndexPt> {
 		int egId;
 		int label;
@@ -78,6 +108,48 @@ public class LossLagrangian {
 		public String toString() {
 			return "(" + egId + " " + label + ") " + lambda;
 		}
+	}
+
+	static Pair<IndexPtAugmented[], IndexPtAugmented[]>  buildAndSortIndicesADMM(ArrayList<DataItem> dataset, double[][] Lambda, 
+			int Np, int Nn, int L, ArrayList<YZPredicted> YtildeDashStar, double rho){
+		
+		IndexPtAugmented[] positiveIndices = new IndexPtAugmented [Np];
+		IndexPtAugmented[] negativeIndices = new IndexPtAugmented [Nn];
+		
+		int posIdx = 0;
+		int negIdx = 0;
+		for(int i = 0; i < dataset.size(); i++){
+			int yi[] = initVec(dataset.get(i).ylabel, L);
+			
+			YZPredicted ytildedash_star_i = null;
+			if (YtildeDashStar != null) {
+				ytildedash_star_i = YtildeDashStar.get(i);
+			}
+			
+			for(int l = 1; l <= L; l ++){
+				
+				double ytildedashstar_i_l = (ytildedash_star_i != null ) ? ytildedash_star_i.getYPredicted().getCount(l) : 0.0; ;
+				
+				double score = Lambda[i][l] - (rho * ytildedashstar_i_l);
+				
+				if(yi[l] == 1){ // Pos label
+					positiveIndices[posIdx] = new IndexPtAugmented(i, l, score);
+					posIdx++;
+				}
+				else if(yi[l] == 0) { // Neg label
+					negativeIndices[negIdx] = new IndexPtAugmented(i, l, score);
+					negIdx++;
+				}
+			}
+		}
+		
+		if(! (negIdx==Nn) && (posIdx==Np) )
+			System.out.println("[admm] Log: Error --- Something not correct .... buildAndSortIndices");
+		
+		Arrays.sort(positiveIndices);
+		Arrays.sort(negativeIndices);
+		
+		return new Pair<LossLagrangian.IndexPtAugmented[], LossLagrangian.IndexPtAugmented[]>(positiveIndices, negativeIndices);
 	}
 	
 	static Pair<IndexPt[], IndexPt[]>  buildAndSortIndices(ArrayList<DataItem> dataset, double[][] Lambda, int Np, int Nn, int L){
@@ -109,6 +181,117 @@ public class LossLagrangian {
 		
 		return new Pair<LossLagrangian.IndexPt[], LossLagrangian.IndexPt[]>(positiveIndices, negativeIndices);
 	}
+	
+	public static Pair<ArrayList<YZPredicted>,Double> optLossLagAugmented (ArrayList<DataItem> dataset, 
+			int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np, ArrayList<YZPredicted> YtildeDashStar, double rho){
+		
+		//// IMPT NOTE: This is the 2nd type of LossLagrangian which does not need piece-wise linear approximation. 
+		//// It does a local search in the space of FPs and FNs and find the y' based on the \lambda's set from previous iterations
+//
+//		1- choose a starting point on the grid (fp,fn)
+//		2- while (true) :
+//		3-     for (fp',fn') \in Neighbours(fp,fn):
+//		4-         compute z_fp',fn' as above 
+//		5-     (fp'',fn'') = argmax_{fp',fn'} z_fp',fn'
+//		6-     if z_fp,fn > z_fp'',fn'' then break
+//		7-     else (fp,fn) = (fp'',fn'')
+//		8- return y' corresponding to (fp,fn)
+//
+				
+		ArrayList<YZPredicted> YtildeStar= new ArrayList<YZPredicted>();
+		
+		Random r_fp = new Random(1);
+		Random r_fn = new Random(2);
+		
+		// choose a starting point on the grid (fp,fn)
+		Pair<Integer, Integer> current_FP_FN = new Pair<Integer, Integer>();
+		current_FP_FN.setFirst(r_fp.nextInt(maxFP)); 
+		current_FP_FN.setSecond(r_fn.nextInt(maxFN));
+		
+		/// Build indices of +ve and -ve points sorted on current Lambda values
+		Pair<IndexPtAugmented[], IndexPtAugmented[]> indices = buildAndSortIndicesADMM(dataset, Lambda, Np, maxFP, numPosLabels, YtildeDashStar, rho);
+		IndexPtAugmented[] positiveIndices = indices.first();
+		IndexPtAugmented[] negativeIndices = indices.second();
+		
+		double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices);
+		double maxNeighbourLoss = Double.NEGATIVE_INFINITY;
+		Pair<Integer, Integer> bestNeighbour = null; 
+		System.out.println("[admm] Log: Starting point  .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+		
+		/// Local search
+		while(true){
+			
+			ArrayList<Pair<Integer, Integer>> neigbours = computeNeighbours(current_FP_FN, maxFP, maxFN);
+				
+			maxNeighbourLoss = Double.NEGATIVE_INFINITY;
+			for(Pair<Integer, Integer> n_pt : neigbours){
+				double n_loss = calcLossAugmented(n_pt, Np, positiveIndices, negativeIndices);
+				
+				if(n_loss > maxNeighbourLoss){
+					maxNeighbourLoss = n_loss;
+					bestNeighbour = n_pt;
+				}
+			}
+			
+			if(currentLoss >= maxNeighbourLoss)
+				break;
+			else {
+				currentLoss = maxNeighbourLoss;
+				current_FP_FN = bestNeighbour;
+				System.out.println("[admm] Log: Local Search -- intermediate points .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+			}
+			
+		}
+		
+		System.out.println("[admm] Log: Local Search -- BEST POINT .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+			
+		/// current_FP_FN is the best seen. Return the Y' corresponding to this setting.
+		int FP = current_FP_FN.first();
+		int FN = current_FP_FN.second();
+		HashMap<Integer, ArrayList<Integer>> finalIndicesToBeSet = new HashMap<Integer, ArrayList<Integer>>();
+		
+		for(int i = 0; i < FP; i ++){
+			int egId = negativeIndices[i].egId;
+			if(finalIndicesToBeSet.containsKey(egId)){
+				finalIndicesToBeSet.get(egId).add(negativeIndices[i].label);
+			}
+			else {
+				ArrayList<Integer> labels = new ArrayList<Integer>();
+				labels.add(negativeIndices[i].label);
+				finalIndicesToBeSet.put(egId, labels);
+			}
+			 
+		}
+		for(int i = 0; i < positiveIndices.length - FN; i ++){
+			int egId = positiveIndices[i].egId;
+			if(finalIndicesToBeSet.containsKey(egId)){
+				finalIndicesToBeSet.get(egId).add(positiveIndices[i].label);
+			}
+			else {
+				ArrayList<Integer> labels = new ArrayList<Integer>();
+				labels.add(positiveIndices[i].label);
+				finalIndicesToBeSet.put(egId, labels);
+			}
+		}
+		
+		for(int egId = 0; egId < dataset.size(); egId ++){
+			
+			ArrayList<Integer> labels = finalIndicesToBeSet.get(egId);
+			
+			YZPredicted yz_i = new YZPredicted(0);
+			if(labels != null){
+				for(int l : labels)
+					yz_i.yPredicted.incrementCount(l);
+			}
+			
+			YtildeStar.add(yz_i);
+			
+		}
+		
+		return new Pair<ArrayList<YZPredicted>, Double>(YtildeStar, currentLoss);
+
+	}
+	
 	
 	public static Pair<ArrayList<YZPredicted>,Double> optLossLag (ArrayList<DataItem> dataset, int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np){
 		
@@ -287,6 +470,30 @@ public class LossLagrangian {
 		return objective;
 	}
 	
+	static double  calcLossAugmented(Pair<Integer, Integer> FP_FN, int Np, 
+			IndexPtAugmented[] posIndices, IndexPtAugmented[] negIndices) {
+		double deltaF1 = 0.0;
+		double maxScoreTerms = 0.0;
+		
+		double objective;
+		
+		int FP = FP_FN.first();
+		int FN = FP_FN.second();
+		
+		deltaF1 = (double)(FP+FN) / (double)(2*Np + FP - FN);
+		
+		for(int i = 0; i < FP; i ++){
+			maxScoreTerms += negIndices[i].score;
+		}
+		
+		for(int i = 0; i < posIndices.length - FN; i ++){
+			maxScoreTerms += posIndices[i].score;
+		}
+		
+		objective = deltaF1 + maxScoreTerms;
+		
+		return objective;
+	}
 		
 	public static int[] initVec(int ygold[], int sz){
 		int yi[] = new int[sz+1]; // 0 position is nil label and is not filled; so one extra element is  created ( 1 .. 51)
