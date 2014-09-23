@@ -192,7 +192,7 @@ typedef struct learn_parm {
   //char regions_file[50];
   double Fweight;
   char dataset_stats_file[500];
-  double rho;
+  double rho_admm;
 
 } LEARN_PARM;
 

@@ -608,7 +608,7 @@ int main(int argc, char* argv[]) {
     /* cutting plane algorithm */
     time_t cp_start, cp_end;
     time(&cp_start);
-    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file, learn_parm.rho);
+    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file, learn_parm.rho_admm);
     time(&cp_end);
 
 #if(DEBUG_LEVEL==1)
@@ -727,7 +727,7 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'y': i++; learn_parm->frac_sim=atof(argv[i]); printf("Frac Sim is %g\n", learn_parm->frac_sim); break;
     case 'z': i++; strcpy(learn_parm->dataset_stats_file,argv[i]);printf("Dataset Stats file is %s\n",learn_parm->dataset_stats_file);break;
     case 'w': i++; learn_parm->Fweight=atof(argv[i]); printf("Weigting param of F is %g\n",learn_parm->Fweight);break;
-    case 'o': i++; learn_parm->rho=atof(argv[i]); printf("Rho is %g\n", learn_parm->rho); break;
+    case 'o': i++; learn_parm->rho_admm=atof(argv[i]); printf("Rho is %g\n", learn_parm->rho_admm); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);
       exit(0);
