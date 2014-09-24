@@ -55,10 +55,10 @@ public class LossLagrangian {
 		int label;
 		double score;
 		
-		public IndexPtAugmented(int i, int l, double lambda){
+		public IndexPtAugmented(int i, int l, double score){
 			this.egId = i;
 			this.label = l;
-			this.score = lambda;
+			this.score = score;
 		}
 		
 		public IndexPtAugmented () {

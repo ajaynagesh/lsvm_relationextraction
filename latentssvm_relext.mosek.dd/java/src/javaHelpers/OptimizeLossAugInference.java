@@ -25,19 +25,6 @@ public class OptimizeLossAugInference {
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD_ADMM(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np, double rho) throws IOException, IloException, InterruptedException, ExecutionException{
 
-		// Initialize t = 0 and Lambda^0
-		// repeat
-		//		~Y* = optLossLag(Lambda, Y)
-		//		~Y'* = optModelLag(Lambda, X)
-		//		if (~Y* == ~Y'*)
-		//			return ~Y*
-		//		
-		//		for(i = 1 to N) {
-		//			for(l = 1 to L) {
-		//				lambda^(t+1)_i (l) = lambda^t_i (l) - eta^t (~y*_{i,l} - ~y'*_{i,l})
-		// until some stopping condition is met
-		// return ~Y*
-
 		//TODO: check if zWeights.length also includes the nil label
 		
 		ArrayList<YZPredicted> YtildeStar = null;
@@ -124,7 +111,7 @@ public class OptimizeLossAugInference {
 					double ystar_il = YtildeStar.get(i).getYPredicted().getCount(l);
 					double ydashstar_il = YtildeDashStar.get(i).getYPredicted().getCount(l);		
 
-					Lambda[i][l] = Lambda[i][l] -  ( eta * rho * (ystar_il - ydashstar_il));
+					Lambda[i][l] = Lambda[i][l] -  ( rho * (ystar_il - ydashstar_il));
 				}
 			}
 			
