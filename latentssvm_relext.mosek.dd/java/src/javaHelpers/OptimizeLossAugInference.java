@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -91,7 +92,7 @@ public class OptimizeLossAugInference {
 			double timemodellag = (double) (endmodellag - endlosslag) / 1000.0;
 			System.out.println("[admm] Ajay: Time taken model lag : " + timemodellag + " s.");
 			
-			double fracSame = fractionSame(YtildeStar, YtildeDashStar);
+			double fracSame = fractionSame_labelwiseComparison(YtildeStar, YtildeDashStar, zWeights.length-1);
 			
 			objective = (lossObj + modelObj);
 			
@@ -278,20 +279,51 @@ public class OptimizeLossAugInference {
 		return fracSame;
 		
 	}
+
+	static double fractionSame_labelwiseComparison(ArrayList<YZPredicted> YtildeStar, ArrayList<YZPredicted> YtildeDashStar, int numPosLabels){
+		
+		double fracSame = 0.0;
+		int numSameLabels = 0, numTotalLabels = 0;
+		
+		
+		if(YtildeStar.size() != YtildeDashStar.size()){
+			System.out.println("SOME ERROR!!!! THE SIZES of YtildeStar and YtildeDashStar are not the same");
+			System.exit(0);
+		}
+		
+		
+		for(int i = 0; i < YtildeStar.size(); i ++){
+			Set<Integer> ytilde_i_set = YtildeStar.get(i).yPredicted.keySet();
+			Set<Integer> ytildedash_i_set = YtildeDashStar.get(i).yPredicted.keySet();
+			
+			int [] ytilde_i = initVec(ytilde_i_set, numPosLabels);
+			int [] ytildedash_i = initVec(ytildedash_i_set, numPosLabels);
+			
+			for(int l = 1; l <= numPosLabels; l ++){
+				if(ytilde_i[l] == ytildedash_i[i])
+					numSameLabels++;
+				
+				numTotalLabels++;
+			}
+		}
+			
+		System.out.println("[admm] numSameLabels: " + numSameLabels + "\tnumTotalLabels: " + numTotalLabels);
+		fracSame = (double)numSameLabels / numTotalLabels;
+		
+		return fracSame;
+		
+	}
 	
-//	static int isSame_label(YZPredicted ytilde, YZPredicted ytildedash){
-//		Set<Integer> y =  ytilde.getYPredicted().keySet();
-//		Set<Integer> ydash = ytildedash.getYPredicted().keySet();
-//		
-//		int numSame = 0;
-//		
-//		for(Integer l: ydash){
-//			if(y.contains(l))
-//				numSame++;
-//		}
-//		
-//		return 
-//	}
+	public static int[] initVec(Set<Integer> ysparse, int sz){
+		int yi[] = new int[sz+1]; // 0 position is nil label and is not filled; so one extra element is  created ( 1 .. 51)
+		Arrays.fill(yi, 0);
+		
+		for(int y : ysparse)
+			yi[y] = 1;
+
+		return yi;
+	}
+	
 	
 	static boolean isSame(YZPredicted ytilde, YZPredicted ytildedash){
 
