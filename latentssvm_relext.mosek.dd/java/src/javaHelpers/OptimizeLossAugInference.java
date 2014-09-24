@@ -22,13 +22,30 @@ public class OptimizeLossAugInference {
 
 	static int MAX_ITERS_SUB_DESCENT = 9;
 
+	static ArrayList<YZPredicted>  init (ArrayList<DataItem> dataset){
+		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
+		
+		for(int i =0 ; i < dataset.size(); i++){
+			int y_i[] = dataset.get(i).ylabel;
+			
+			YZPredicted yztilde = new YZPredicted(0);
+			for(int label : y_i){
+				yztilde.yPredicted.incrementCount(label);
+			}
+			
+			YtildeDashStar.add(yztilde);
+		}
+		
+		return YtildeDashStar;
+	}
+	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD_ADMM(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np, double rho) throws IOException, IloException, InterruptedException, ExecutionException{
 
 		//TODO: check if zWeights.length also includes the nil label
 		
-		ArrayList<YZPredicted> YtildeStar = null;
-		ArrayList<YZPredicted> YtildeDashStar = null;
+		ArrayList<YZPredicted> YtildeStar = null; 
+		ArrayList<YZPredicted> YtildeDashStar = init(dataset);
 		double Lambda[][] = new double[dataset.size()][zWeights.length];
 		int t = 0;
 
