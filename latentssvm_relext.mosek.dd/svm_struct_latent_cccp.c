@@ -226,6 +226,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   proximal_rhs = NULL;
   cut_error = NULL; 
 
+  printf("ITER 0 \n(before cutting plane) \n");
   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm);
   value = margin - sprod_ns(w, new_constraint);
 	
