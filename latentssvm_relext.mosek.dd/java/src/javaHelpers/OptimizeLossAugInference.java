@@ -22,6 +22,7 @@ import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 public class OptimizeLossAugInference {
 
 	static int MAX_ITERS_SUB_DESCENT = 9;
+	private static String matchingCount;
 
 	static ArrayList<YZPredicted>  init (ArrayList<DataItem> dataset){
 		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
@@ -66,7 +67,8 @@ public class OptimizeLossAugInference {
 		
 		double objective = 0;
 		double prevObjective = Double.POSITIVE_INFINITY;
-		
+		int matchingCounter=0;
+		int maxMatchCount = 5;
 		while(true){
 
 			long startiter = System.currentTimeMillis();
@@ -97,11 +99,26 @@ public class OptimizeLossAugInference {
 			objective = (lossObj + modelObj);
 			
 			System.out.println("-------------------------------------");
-			System.out.println("[admm] Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective);
+			System.out.println("[admm] Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective + " match count is " + matchingCounter);
 			System.out.println("-------------------------------------");
+			if(prevFracSame == fracSame){
+				matchingCounter++;
+			}
+			else
+				matchingCounter =0;
 			
 			// Stopping condition for the subgradient descent algorithm
-			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+/*			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
+				System.out.println("[admm] Met the stopping criterion. !!");
+				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
+				break; 
+			}
+			else{
+				prevFracSame = fracSame;
+				
+			}
+*/
+			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter<maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("[admm] Met the stopping criterion. !!");
 				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
 				break; 
@@ -301,6 +318,9 @@ public class OptimizeLossAugInference {
 			int [] ytildedash_i = initVec(ytildedash_i_set, numPosLabels);
 			
 			for(int l = 1; l <= numPosLabels; l ++){
+				if(ytilde_i[l] == ytildedash_i[l] &&  ytildedash_i[l] == 0)
+					continue;
+				
 				if(ytilde_i[l] == ytildedash_i[l])
 					numSameLabels++;
 				
