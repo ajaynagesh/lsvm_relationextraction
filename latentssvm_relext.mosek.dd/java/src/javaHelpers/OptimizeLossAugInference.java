@@ -120,8 +120,6 @@ public class OptimizeLossAugInference {
 //				prevObjective = objective;
 //			}
 			
-				
-
 			double eta = 1.0 / Math.sqrt(t);
 			for(int i = 0; i < dataset.size(); i ++){
 				for(int l = 1; l < zWeights.length; l ++){
@@ -129,7 +127,10 @@ public class OptimizeLossAugInference {
 					double ystar_il = YtildeStar.get(i).getYPredicted().getCount(l);
 					double ydashstar_il = YtildeDashStar.get(i).getYPredicted().getCount(l);		
 
-					Lambda[i][l] = Lambda[i][l] -  ( rho * (ystar_il - ydashstar_il));
+					if(rho == 0.0)
+						Lambda[i][l] = Lambda[i][l] -  ( eta * (ystar_il - ydashstar_il));
+					else
+						Lambda[i][l] = Lambda[i][l] -  ( rho * (ystar_il - ydashstar_il));
 				}
 			}
 			
