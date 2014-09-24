@@ -130,7 +130,7 @@ public class LossLagrangian {
 				
 				double ytildedashstar_i_l = (ytildedash_star_i != null ) ? ytildedash_star_i.getYPredicted().getCount(l) : 0.0; ;
 				
-				double score = Lambda[i][l] - (rho * ytildedashstar_i_l);
+				double score = Lambda[i][l] - (rho * ytildedashstar_i_l) + (rho/2); //last term (rho/2) may not be necessary, as it is a constant. Still adding for uniformity since added in the other optimization problem
 				
 				if(yi[l] == 1){ // Pos label
 					positiveIndices[posIdx] = new IndexPtAugmented(i, l, score);

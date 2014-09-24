@@ -101,24 +101,24 @@ public class OptimizeLossAugInference {
 			System.out.println("-------------------------------------");
 			
 			// Stopping condition for the subgradient descent algorithm
-//			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
-//				System.out.println("Met the stopping criterion. !!");
-//				System.out.println("Fraction of same labels is : " + fracSame + "; Num of iters completed : " + t);
-//				break; 
-//			}
-//			else{
-//				prevFracSame = fracSame;
-//				
-//			}
-
-			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.1) { // || both YtildeStar and YtildeDashStar are equal
+			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("[admm] Met the stopping criterion. !!");
-				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
+				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
 				break; 
 			}
-			else {
-				prevObjective = objective;
+			else{
+				prevFracSame = fracSame;
+				
 			}
+
+//			if(t > MAX_ITERS_SUB_DESCENT || Math.abs(objective-prevObjective) < 0.1) { // || both YtildeStar and YtildeDashStar are equal
+//				System.out.println("[admm] Met the stopping criterion. !!");
+//				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));
+//				break; 
+//			}
+//			else {
+//				prevObjective = objective;
+//			}
 			
 				
 
@@ -307,7 +307,7 @@ public class OptimizeLossAugInference {
 			}
 		}
 			
-		System.out.println("[admm] numSameLabels: " + numSameLabels + "\tnumTotalLabels: " + numTotalLabels);
+		//System.out.println("[admm] numSameLabels: " + numSameLabels + "\tnumTotalLabels: " + numTotalLabels);
 		fracSame = (double)numSameLabels / numTotalLabels;
 		
 		return fracSame;

@@ -279,7 +279,7 @@ public class ModelLagrangian {
 		
 		// l = 1 to not count the zero label; ytildedash indices start from 0 (and there are 'numLabels - 1' variables)
 		for(int l = 1; l <= numOfLabels-1 ; l++){
-			double coeff = - lambda_i[l] - (rho * ytildestar_i.getYPredicted().getCount(l) ); 
+			double coeff = - lambda_i[l] - (rho * ytildestar_i.getYPredicted().getCount(l) ) + (rho/2); // note adding the last term to coeff  
 			objective.addTerm(coeff, ytildedash[l-1]); // Note 'l-1' here
 		}
 		
