@@ -300,7 +300,7 @@ public class OptimizeLossAugInference {
 			int [] ytildedash_i = initVec(ytildedash_i_set, numPosLabels);
 			
 			for(int l = 1; l <= numPosLabels; l ++){
-				if(ytilde_i[l] == ytildedash_i[i])
+				if(ytilde_i[l] == ytildedash_i[l])
 					numSameLabels++;
 				
 				numTotalLabels++;
