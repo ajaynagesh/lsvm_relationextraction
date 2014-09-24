@@ -68,7 +68,7 @@ public class OptimizeLossAugInference {
 		double objective = 0;
 		double prevObjective = Double.POSITIVE_INFINITY;
 		int matchingCounter=0;
-		int maxMatchCount = 5;
+		int maxMatchCount = 4;
 		while(true){
 
 			long startiter = System.currentTimeMillis();
@@ -101,7 +101,7 @@ public class OptimizeLossAugInference {
 			System.out.println("-------------------------------------");
 			System.out.println("[admm] Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective + " match count is " + matchingCounter);
 			System.out.println("-------------------------------------");
-			if(prevFracSame == fracSame){
+			if(Math.abs(prevFracSame -fracSame) <0.01){
 				matchingCounter++;
 			}
 			else
@@ -118,7 +118,7 @@ public class OptimizeLossAugInference {
 				
 			}
 */
-			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter<maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
+			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter>maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("[admm] Met the stopping criterion. !!");
 				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
 				break; 
