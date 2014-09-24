@@ -21,7 +21,7 @@ import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class OptimizeLossAugInference {
 
-	static int MAX_ITERS_SUB_DESCENT = 9;
+	static int MAX_ITERS_SUB_DESCENT = 25;
 	private static String matchingCount;
 
 	static ArrayList<YZPredicted>  init (ArrayList<DataItem> dataset){
