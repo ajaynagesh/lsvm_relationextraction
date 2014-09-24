@@ -144,7 +144,7 @@ public class FindMaxViolatorHelperAll {
 		String datasetFile = args[1];
 		double simFracParam = Double.parseDouble(args[2]);
 		String datasetStatsFile = args[3];
-		
+		double rho;
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
 		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
 		
@@ -153,9 +153,17 @@ public class FindMaxViolatorHelperAll {
 		
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(currentParametersFile+".result")));
 		
-		// ********* Calling the LossAugmented Inference procedure which is a sub-gradient method ************** 
-		System.out.println("Log: Local search based dual decomposition");
-		ArrayList<YZPredicted> yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np);
+		ArrayList<YZPredicted> yzPredictedAll = null;
+		// ********* Calling the LossAugmented Inference procedure which is a sub-gradient method **************
+		if(args[4] != null){
+			rho = Double.parseDouble(args[4]);
+			System.out.println("[admm] Log: Local search based dual decomposition");
+			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD_ADMM(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np, rho);
+		}
+		else {
+			System.out.println(" Log: Local search based dual decomposition");
+			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np);
+		}
 		
 		for(int i = 0; i < dataset.size(); i++){
 		

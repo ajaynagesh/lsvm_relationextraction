@@ -21,7 +21,6 @@ clean:
 	rm -f svm_latent_learn svm_latent_classify
 	cd java && ant clean
 
-
 svm_latent_learn: svm_struct_latent_cccp.o svm_common.o mosek_qp_optimize.o svm_struct_latent_api.o 
 	$(LD) $(LDFLAGS) svm_struct_latent_cccp.o svm_common.o mosek_qp_optimize.o svm_struct_latent_api.o -o svm_latent_learn -L $(MSKLIBPATH) $(MSKLINKFLAGS)
 

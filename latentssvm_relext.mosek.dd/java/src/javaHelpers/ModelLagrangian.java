@@ -26,7 +26,58 @@ import edu.stanford.nlp.util.Pair;
 
 public class ModelLagrangian {
 	
-	public static Pair<ArrayList<YZPredicted>, Double> optModelLag_cplex(ArrayList<DataItem> dataset, LabelWeights [] zWeights, double Lambda[][]) throws IloException{
+	public static Pair<ArrayList<YZPredicted>, Double> optModelLagAugmented(ArrayList<DataItem> dataset, 
+			LabelWeights [] zWeights, double Lambda[][], ArrayList<YZPredicted> YtildeStar, double rho) throws IloException{
+
+		long start = System.currentTimeMillis();
+		long curtime = System.currentTimeMillis();
+		double inittime = (curtime - start) / 1000.0;
+		System.err.println("[admm] Log: FindMaxViolatorHelperAll: Init -- time taken " + inittime + " s.");
+		long prevtime = curtime;
+
+		double modelObj =  0;
+		
+		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
+
+		for(int i = 0; i < dataset.size(); i++){
+
+			if(i % 10000 == 0){
+				curtime = System.currentTimeMillis();
+				double timeTaken = (curtime - prevtime)/1000.0;
+				System.err.println("[admm] Log: FindMaxViolatorHelperAll: Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
+				prevtime = curtime;
+			}
+
+			DataItem example = dataset.get(i);
+			int [] yLabelsGold = example.ylabel;
+			int numMentions = example.pattern.size();
+			ArrayList<Counter<Integer>> pattern = example.pattern; 
+
+			List<Counter<Integer>> scores = Utils.computeScores(pattern, zWeights, yLabelsGold);
+
+			Set<Integer> yLabelsSetGold = new HashSet<Integer>();
+			for(int y : yLabelsGold)  
+				yLabelsSetGold.add(y);
+			
+			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho);
+			YZPredicted yz = result.first();
+			modelObj += result.second();
+			
+			// TODO: check the ilp method once completely for the correct formulation
+
+			YtildeDashStar.add(yz);	
+		}
+
+		long end = System.currentTimeMillis();
+		double totTime = (end - start) / 1000.0; 
+		System.err.println("[admm] Log: FindMaxViolatorHelperAll: Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
+
+		return new Pair<ArrayList<YZPredicted>, Double>(YtildeDashStar, modelObj) ;
+
+	}
+	
+	public static Pair<ArrayList<YZPredicted>, Double> optModelLag(ArrayList<DataItem> dataset, 
+			LabelWeights [] zWeights, double Lambda[][]) throws IloException{
 
 		long start = System.currentTimeMillis();
 		long curtime = System.currentTimeMillis();
@@ -119,6 +170,52 @@ public class ModelLagrangian {
 		return new Pair<YZPredicted, Double>(predictedVals, cplexILPModel.getObjValue());
 	}
 	
+	static Pair<YZPredicted,Double> buildAndSolveCplexILPModelADMM( List<Counter<Integer>> scores,
+			  int numOfMentions,
+			  int nilIndex,
+			  double [][] lambda,
+			  int numOfLabels,
+			  int i, 
+			  YZPredicted YtildeStar_i, 
+			  double rho) throws IloException{
+				
+				YZPredicted predictedVals = new YZPredicted(numOfMentions);
+				Counter<Integer> yPredicted = predictedVals.getYPredicted();
+				int [] zPredicted = predictedVals.getZPredicted();
+				
+				IloCplex cplexILPModel = new IloCplex();
+				IloNumVarType varType   = IloNumVarType.Int; 
+				
+				// create variables
+				Pair<ArrayList<IloNumVar[]>, IloNumVar[]> variables =  createVariables(cplexILPModel, numOfMentions, numOfLabels);
+				ArrayList<IloNumVar[]> hiddenvars = variables.first();
+				IloNumVar[] ytildedash = variables.second();
+				// create the model
+				buildILPModelADMM(cplexILPModel, hiddenvars, ytildedash, scores, lambda[i], numOfMentions, numOfLabels, YtildeStar_i, rho);
+				
+				// solve the model
+				if ( cplexILPModel.solve() ) {
+					System.out.println("Solution status = " + cplexILPModel.getStatus());
+					System.out.println(" cost = " + cplexILPModel.getObjValue());
+				}
+				
+				for(int m = 0; m < numOfMentions; m++){
+					for(int l = 1; l < numOfLabels; l++){
+						if(cplexILPModel.getValue(hiddenvars.get(m)[l]) == 1){
+							zPredicted[m] = l;
+						}
+					}
+				}
+				
+				// Do not set the nil label 
+				for(int l=1; l<=numOfLabels-1; l ++){
+					if(cplexILPModel.getValue(ytildedash[l-1]) == 1) // Note 'l-1' here
+						yPredicted.setCount(l, 1);
+				}
+				
+				return new Pair<YZPredicted, Double>(predictedVals, cplexILPModel.getObjValue());
+			}
+	
 	static void buildILPModel(IloCplex cplexILPModel, ArrayList<IloNumVar[]> hiddenvars, IloNumVar[] ytildedash, 
 			List<Counter<Integer>> scores, double [] lambda_i, int numOfMentions, int numOfLabels) throws IloException{
 
@@ -135,6 +232,55 @@ public class ModelLagrangian {
 		// l = 1 to not count the zero label; ytildedash indices start from 0 (and there are 'numLabels - 1' variables)
 		for(int l = 1; l <= numOfLabels-1 ; l++){
 			objective.addTerm(-lambda_i[l], ytildedash[l-1]); // Note 'l-1' here
+		}
+		
+		cplexILPModel.addMaximize(objective);
+		
+		for(int m = 0; m < numOfMentions; m++){
+			IloLinearNumExpr cons_type1 = cplexILPModel.linearNumExpr();
+			for(int l = 0; l < numOfLabels; l ++){ // Include the NIL label for hidden variables
+				cons_type1.addTerm(1, hiddenvars.get(m)[l]);
+			}
+			cplexILPModel.addEq(cons_type1, 1);
+		}
+		
+		for(int m = 0; m < numOfMentions; m++){
+			for(int l = 1; l <= numOfLabels-1; l ++){ // do not include the NIL label as ytildedash is involved in these constraints
+				IloLinearNumExpr cons_type2 = cplexILPModel.linearNumExpr();
+				cons_type2.addTerm(1, hiddenvars.get(m)[l]);
+				cons_type2.addTerm(-1, ytildedash[l-1]); // Note 'l-1' here
+				cplexILPModel.addLe(cons_type2, 0);
+			}
+		}
+		
+		for(int l = 1; l <= numOfLabels-1; l++){ // do not include the NIL label as ytildedash is involved in these constraints
+			IloLinearNumExpr cons_type3 = cplexILPModel.linearNumExpr();
+			for(int m = 0; m < numOfMentions; m ++){
+				cons_type3.addTerm(1, hiddenvars.get(m)[l]);
+			}
+			cons_type3.addTerm(-1, ytildedash[l-1]); //Note 'l-1' here
+			cplexILPModel.addGe(cons_type3, 0);
+		}
+			
+	}
+	
+	static void buildILPModelADMM(IloCplex cplexILPModel, ArrayList<IloNumVar[]> hiddenvars, IloNumVar[] ytildedash, 
+			List<Counter<Integer>> scores, double [] lambda_i, int numOfMentions, int numOfLabels, YZPredicted ytildestar_i, double rho) throws IloException{
+
+		IloLinearNumExpr objective = cplexILPModel.linearNumExpr();
+		
+		for(int m = 0; m < numOfMentions; m++){
+			for(int l = 0; l < numOfLabels; l++){
+				IloNumVar var = hiddenvars.get(m)[l];
+				double coeff = scores.get(m).getCount(l);
+				objective.addTerm(coeff, var);
+			}
+		}
+		
+		// l = 1 to not count the zero label; ytildedash indices start from 0 (and there are 'numLabels - 1' variables)
+		for(int l = 1; l <= numOfLabels-1 ; l++){
+			double coeff = - lambda_i[l] - (rho * ytildestar_i.getYPredicted().getCount(l) ) + (rho/2); // note adding the last term to coeff  
+			objective.addTerm(coeff, ytildedash[l-1]); // Note 'l-1' here
 		}
 		
 		cplexILPModel.addMaximize(objective);
