@@ -303,8 +303,8 @@ public class OptimizeLossAugInference {
 		double fracSame = 0.0;
 		double apparentFracSame = 0.0;
 		int numSameLabels = 0, numTotalLabels = 0;
-		int apparentSameLabels =0, apparentSameLabelsTotal=0;
-		
+		int apparentSameLabels =0, apparentLabelsTotal=0;
+		int zerosLabels =0;
 		if(YtildeStar.size() != YtildeDashStar.size()){
 			System.out.println("SOME ERROR!!!! THE SIZES of YtildeStar and YtildeDashStar are not the same");
 			System.exit(0);
@@ -330,19 +330,22 @@ public class OptimizeLossAugInference {
 				numTotalLabels++;
 				
 				
-				if(ytilde_i[l] == ytildedash_i[l] &&  ytildedash_i[l] == 0)
+				if(ytilde_i[l] == ytildedash_i[l] &&  ytildedash_i[l] == 0){
+					zerosLabels++;
 					continue;
+				}
 				if(ytilde_i[l] == ytildedash_i[l])
 					apparentSameLabels++;
 					
-				apparentSameLabelsTotal++;
+				apparentLabelsTotal++;
 					
 			}
 		}
 			
-		//System.out.println("[admm] numSameLabels: " + numSameLabels + "\tnumTotalLabels: " + numTotalLabels);
 		fracSame = (double)numSameLabels / numTotalLabels;
 		apparentFracSame = (double)apparentSameLabels / apparentSameLabelsTotal;
+		System.out.println("[admm] apparentSameLabels: " + apparentSameLabels +"\tapparentTotalLabels: " + apparentLabelsTotal +"\tzeroMatchingLabels: " +zerosLabels "\tnumTotalLabels: " + numTotalLabels);
+		 
 		return fracSame;
 		
 	}
