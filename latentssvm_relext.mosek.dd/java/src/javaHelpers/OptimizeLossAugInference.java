@@ -343,7 +343,7 @@ public class OptimizeLossAugInference {
 		}
 			
 		fracSame = (double)numSameLabels / numTotalLabels;
-		apparentFracSame = (double)apparentSameLabels / apparentSameLabelsTotal;
+		apparentFracSame = (double)apparentSameLabels/apparentLabelsTotal;
 		System.out.println("[admm] apparentSameLabels: " + apparentSameLabels +"\tapparentTotalLabels: " + apparentLabelsTotal +"\tzeroMatchingLabels: " +zerosLabels+ "\tnumTotalLabels: " + numTotalLabels);
 		 
 		return fracSame;
