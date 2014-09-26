@@ -301,8 +301,9 @@ public class OptimizeLossAugInference {
 	static double fractionSame_labelwiseComparison(ArrayList<YZPredicted> YtildeStar, ArrayList<YZPredicted> YtildeDashStar, int numPosLabels){
 		
 		double fracSame = 0.0;
+		double apparentFracSame = 0.0;
 		int numSameLabels = 0, numTotalLabels = 0;
-		
+		int apparentSameLabels =0, apparentSameLabelsTotal=0;
 		
 		if(YtildeStar.size() != YtildeDashStar.size()){
 			System.out.println("SOME ERROR!!!! THE SIZES of YtildeStar and YtildeDashStar are not the same");
@@ -318,19 +319,30 @@ public class OptimizeLossAugInference {
 			int [] ytildedash_i = initVec(ytildedash_i_set, numPosLabels);
 			
 			for(int l = 1; l <= numPosLabels; l ++){
-				if(ytilde_i[l] == ytildedash_i[l] &&  ytildedash_i[l] == 0)
+				/*
+				  if(ytilde_i[l] == ytildedash_i[l] &&  ytildedash_i[l] == 0)
 					continue;
+				*/
 				
 				if(ytilde_i[l] == ytildedash_i[l])
 					numSameLabels++;
-				
+
 				numTotalLabels++;
+				
+				
+				if(ytilde_i[l] == ytildedash_i[l] &&  ytildedash_i[l] == 0)
+					continue;
+				if(ytilde_i[l] == ytildedash_i[l])
+					apparentSameLabels++;
+					
+				apparentSameLabelsTotal++;
+					
 			}
 		}
 			
 		//System.out.println("[admm] numSameLabels: " + numSameLabels + "\tnumTotalLabels: " + numTotalLabels);
 		fracSame = (double)numSameLabels / numTotalLabels;
-		
+		apparentFracSame = (double)apparentSameLabels / apparentSameLabelsTotal;
 		return fracSame;
 		
 	}
