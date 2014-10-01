@@ -121,10 +121,14 @@ public class OptimizeLossAugInference {
 			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter>maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("[admm] Met the stopping criterion. !!");
 				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
-				break; 
+				if((prevObjective-objective) > 0.01 *Math.abs(prevObjective))
+					matchingCounter=0;
+				else
+					break; 
 			}
 			else{
 				prevFracSame = fracSame;
+				prevObjective = objective;
 				
 			}
 
@@ -184,12 +188,17 @@ public class OptimizeLossAugInference {
 		int t = 0;
 
 		// init Lambda
+		
 		for(int i = 0; i < dataset.size(); i ++){
 			for(int l = 1; l < zWeights.length; l ++){
 				Lambda[i][l] = 0.0;
 			}
 		}
 
+
+		// init lambda from previous iterations lambdas
+		readLambdaFromFile(Lambda);
+		
 		// Starting code for  threading
 
 		// A new comment to test branching
@@ -275,6 +284,13 @@ public class OptimizeLossAugInference {
 
 	}
 	
+	private static void readLambdaFromFile(double[][] lambda) {
+		// TODO Auto-generated method stub
+		
+		
+		
+	}
+
 	static double fractionSame(ArrayList<YZPredicted> YtildeStar, ArrayList<YZPredicted> YtildeDashStar){
 		
 		double fracSame = 0.0;
