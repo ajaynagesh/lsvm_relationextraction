@@ -21,7 +21,7 @@ import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 
 public class OptimizeLossAugInference {
 
-	static int MAX_ITERS_SUB_DESCENT = 25;
+	static int MAX_ITERS_SUB_DESCENT = 10;
 	private static String matchingCount;
 
 	static ArrayList<YZPredicted>  init (ArrayList<DataItem> dataset){
@@ -119,12 +119,25 @@ public class OptimizeLossAugInference {
 			}
 */
 			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter>maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
+				if(fracSame > simFracParam){
+
+				}
+				else if (t> MAX_ITERS_SUB_DESCENT){
+
+				}
+				else if(prevObjective - objective > 1){
+
+				matchingCounter =0;
+				continue;
+
+				}
+				else{
+
+				}
+				
 				System.out.println("[admm] Met the stopping criterion. !!");
 				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
-				if((prevObjective-objective) > 0.01 *Math.abs(prevObjective))
-					matchingCounter=0;
-				else
-					break; 
+				break;
 			}
 			else{
 				prevFracSame = fracSame;
