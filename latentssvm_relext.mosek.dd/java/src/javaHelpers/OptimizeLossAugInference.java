@@ -68,7 +68,7 @@ public class OptimizeLossAugInference {
 		double objective = 0;
 		double prevObjective = Double.POSITIVE_INFINITY;
 		int matchingCounter=0;
-		int maxMatchCount = 4;
+		int maxMatchCount = 3;
 		while(true){
 
 			long startiter = System.currentTimeMillis();
@@ -104,10 +104,10 @@ public class OptimizeLossAugInference {
 			if(Math.abs(prevFracSame -fracSame) <0.01){
 				matchingCounter++;
 			}
-			else
+			else{
 				matchingCounter =0;
-			
-			// Stopping condition for the subgradient descent algorithm
+			}
+			 // Stopping condition for the subgradient descent algorithm
 /*			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || fracSame == prevFracSame) { // || both YtildeStar and YtildeDashStar are equal
 				System.out.println("[admm] Met the stopping criterion. !!");
 				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
@@ -119,20 +119,12 @@ public class OptimizeLossAugInference {
 			}
 */
 			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter>maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
-				if(fracSame > simFracParam){
+				if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT){
 
 				}
-				else if (t> MAX_ITERS_SUB_DESCENT){
-
-				}
-				else if(prevObjective - objective > 1){
-
-				matchingCounter =0;
-				continue;
-
-				}
-				else{
-
+				else if((prevObjective - objective) >1 ) {
+					matchingCounter =0;
+					continue;
 				}
 				
 				System.out.println("[admm] Met the stopping criterion. !!");
