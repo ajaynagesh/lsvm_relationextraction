@@ -12,5 +12,4 @@ svm_latent_learn
 svm_latent_classify
 *~
 .classpath
-bin
 .settings

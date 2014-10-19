@@ -1,5 +1,6 @@
 # Makefile for Latent Structural SVM
 
+BASE = ~/BTP/repo/lsvm_relationextraction
 CC=gcc
 CFLAGS= -g -Wall
 #CFLAGS= -O3 -fomit-frame-pointer -ffast-math
@@ -7,11 +8,12 @@ CFLAGS= -g -Wall
 LD=gcc
 #LDFLAGS= -g
 LDFLAGS= -O3
-#LDFLAGS = -O3 -pg
+#LDFLAGS = -O3  -pg
 LIBS= -lm
-MOSEK_H= /home/ajay/max_margin/mosek.5/5/tools/platform/linux64x86/h/
+MOSEK_H= $(BASE)/libs/h/
 MSKLINKFLAGS= -lirc -lguide -limf -lsvml -lunwind -lmosek64 -lpthread -lc -ldl -lm
-MSKLIBPATH= /home/ajay/max_margin/mosek.5/5/tools/platform/linux64x86/bin/
+MSKLIBPATH= $(BASE)/libs/bin/
+LIBRARY_PATH = :$(BASE)/libs/bin/:$(BASE)/libs/
 
 all: svm_latent_learn svm_latent_classify
 	cd java && ant

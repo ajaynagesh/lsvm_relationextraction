@@ -60,10 +60,10 @@ double* add_list_nn(SVECTOR *a, long totwords)
 
     sum=create_nvector(totwords);
 
-    for(i=0;i<=totwords;i++) 
+    for(i=0;i<=totwords;i++)
       sum[i]=0;
 
-    for(f=a;f;f=f->next)  
+    for(f=a;f;f=f->next)
       add_vector_ns(sum,f,f->factor);
 
     return(sum);
@@ -81,7 +81,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
   long l,k;
   SVECTOR *fvec;
-  WORD *words;  
+  WORD *words;
 
   LABEL       *ybar_all = (LABEL*) malloc(sizeof(LABEL) * m);
   LATENT_VAR *hbar_all = (LATENT_VAR*) malloc (sizeof(LATENT_VAR) * m);
@@ -139,13 +139,13 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   for (i=1;i<sm->sizePsi+1;i++) {
     if (fabs(new_constraint[i])>1E-10) l++; // non-zero
   }
-  words = (WORD*)my_malloc(sizeof(WORD)*(l+1)); 
+  words = (WORD*)my_malloc(sizeof(WORD)*(l+1));
   assert(words!=NULL);
   k=0;
   for (i=1;i<sm->sizePsi+1;i++) {
     if (fabs(new_constraint[i])>1E-10) {
       words[k].wnum = i;
-      words[k].weight = new_constraint[i]; 
+      words[k].weight = new_constraint[i];
       k++;
     }
   }
@@ -156,7 +156,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   free(words);
   free(new_constraint);
 
-  return(fvec); 
+  return(fvec);
 
 }
 
@@ -170,7 +170,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   double *delta; /* rhs of constraints */
   SVECTOR *new_constraint;
   double dual_obj, alphasum;
-  int iter, size_active; 
+  int iter, size_active;
   double value;
   int r;
   int *idle; /* for cleaning up */
@@ -190,18 +190,18 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   double temp_var;
   double proximal_term, primal_lower_bound;
 
-  double v_k; 
-  double obj_difference; 
+  double v_k;
+  double obj_difference;
   double *cut_error; // cut_error[i] = alpha_{k,i} at current center x_k
-  double sigma_k; 
+  double sigma_k;
   double m2 = 0.2;
   double m3 = 0.9;
-  double gTd; 
-  double last_sigma_k=0; 
+  double gTd;
+  double last_sigma_k=0;
 
   double initial_primal_obj;
   int suff_decrease_cond=0;
-  double decrease_proportion = 0.2; // start from 0.2 first 
+  double decrease_proportion = 0.2; // start from 0.2 first
 
   double z_k_norm;
   double last_z_k_norm=0;
@@ -224,40 +224,40 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   idle = NULL;
 
   proximal_rhs = NULL;
-  cut_error = NULL; 
+  cut_error = NULL;
 
   printf("ITER 0 \n(before cutting plane) \n");
   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm);
   value = margin - sprod_ns(w, new_constraint);
-	
+
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value;
   primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value;
   primal_lower_bound = 0;
   expected_descent = -primal_obj_b;
-  initial_primal_obj = primal_obj_b; 
+  initial_primal_obj = primal_obj_b;
 
-  max_rho = C; 
+  max_rho = C;
 
   printf("Running CCCP inner loop solver: \n"); fflush(stdout);
 
   time_t iter_start, iter_end;
 
-  while ((!suff_decrease_cond)&&(expected_descent<-epsilon)&&(iter<MAX_ITER)) { 
+  while ((!suff_decrease_cond)&&(expected_descent<-epsilon)&&(iter<MAX_ITER)) {
     iter+=1;
     size_active+=1;
 
     time(&iter_start);
 
 #if (DEBUG_LEVEL>0)
-    printf("ITER %d\n", iter); 
+    printf("ITER %d\n", iter);
 #endif
-    printf("."); fflush(stdout); 
+    printf("."); fflush(stdout);
 
     /* add  constraint */
     dXc = (DOC**)realloc(dXc, sizeof(DOC*)*size_active);
     assert(dXc!=NULL);
     dXc[size_active-1] = (DOC*)malloc(sizeof(DOC));
-    dXc[size_active-1]->fvec = new_constraint; 
+    dXc[size_active-1]->fvec = new_constraint;
     dXc[size_active-1]->slackid = 1; // only one common slackid (one-slack)
     dXc[size_active-1]->costfactor = 1.0;
 
@@ -268,21 +268,21 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     assert(alpha!=NULL);
     alpha[size_active-1] = 0.0;
     idle = (int*)realloc(idle, sizeof(int)*size_active);
-    assert(idle!=NULL); 
+    assert(idle!=NULL);
     idle[size_active-1] = 0;
     /* proximal point */
     proximal_rhs = (double*)realloc(proximal_rhs, sizeof(double)*size_active);
-    assert(proximal_rhs!=NULL); 
-    cut_error = (double*)realloc(cut_error, sizeof(double)*size_active); 
-    assert(cut_error!=NULL); 
+    assert(proximal_rhs!=NULL);
+    cut_error = (double*)realloc(cut_error, sizeof(double)*size_active);
+    assert(cut_error!=NULL);
     // note g_i = - new_constraint
-    cut_error[size_active-1] = C*(sprod_ns(w_b, new_constraint) - sprod_ns(w, new_constraint)); 
-    cut_error[size_active-1] += (primal_obj_b - 0.5*sprod_nn(w_b,w_b,sm->sizePsi)); 
-    cut_error[size_active-1] -= (primal_obj - 0.5*sprod_nn(w,w,sm->sizePsi)); 
+    cut_error[size_active-1] = C*(sprod_ns(w_b, new_constraint) - sprod_ns(w, new_constraint));
+    cut_error[size_active-1] += (primal_obj_b - 0.5*sprod_nn(w_b,w_b,sm->sizePsi));
+    cut_error[size_active-1] -= (primal_obj - 0.5*sprod_nn(w,w,sm->sizePsi));
 
     gammaG0 = (double*)realloc(gammaG0, sizeof(double)*size_active);
     assert(gammaG0!=NULL);
-      
+
     /* update Gram matrix */
     G = (double**)realloc(G, sizeof(double*)*size_active);
     assert(G!=NULL);
@@ -297,13 +297,13 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     }
     G[size_active-1][size_active-1] = sprod_ss(dXc[size_active-1]->fvec,dXc[size_active-1]->fvec);
 
-	
+
     /* update gammaG0 */
     if (null_step==1) {
       gammaG0[size_active-1] = sprod_ns(w_b, dXc[size_active-1]->fvec);
     } else {
       for (i=0;i<size_active;i++) {
-	gammaG0[i] = sprod_ns(w_b, dXc[i]->fvec); 
+	gammaG0[i] = sprod_ns(w_b, dXc[i]->fvec);
       }
     }
 
@@ -314,7 +314,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
 
     /* solve QP to update alpha */
-    dual_obj = 0; 
+    dual_obj = 0;
     time_t mosek_start, mosek_end;
     time(&mosek_start);
     r = mosek_qp_optimize(G, proximal_rhs, alpha, (long) size_active, C, &dual_obj,rho);
@@ -333,29 +333,29 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
       }
     }
 
-    z_k_norm = sqrt(sprod_nn(w,w,sm->sizePsi)); 
+    z_k_norm = sqrt(sprod_nn(w,w,sm->sizePsi));
 
     add_vector_nn(w, w_b, sm->sizePsi, rho/(1+rho));
 
-    
+
     /* detect if step size too small */
-    sigma_k = 0; 
-    alphasum = 0; 
+    sigma_k = 0;
+    alphasum = 0;
     for (j=0;j<size_active;j++) {
-      sigma_k += alpha[j]*cut_error[j]; 
-      alphasum+=alpha[j]; 
+      sigma_k += alpha[j]*cut_error[j];
+      alphasum+=alpha[j];
     }
-    sigma_k/=C; 
+    sigma_k/=C;
     gTd = -C*(sprod_ns(w,new_constraint) - sprod_ns(w_b,new_constraint));
 
 #if (DEBUG_LEVEL>0)
     for (j=0;j<size_active;j++) {
       printf("alpha[%d]: %.8g, cut_error[%d]: %.8g\n", j, alpha[j], j, cut_error[j]);
     }
-    printf("sigma_k: %.8g\n", sigma_k); 
+    printf("sigma_k: %.8g\n", sigma_k);
     printf("alphasum: %.8g\n", alphasum);
-    printf("g^T d: %.8g\n", gTd); 
-    fflush(stdout); 
+    printf("g^T d: %.8g\n", gTd);
+    fflush(stdout);
 #endif
 
 
@@ -373,22 +373,22 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
     /* print primal objective */
     primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value;
-     
+
 #if (DEBUG_LEVEL>0)
     printf("ITER PRIMAL_OBJ %.4f\n", primal_obj); fflush(stdout);
 #endif
-    
- 
-    temp_var = sprod_nn(w_b,w_b,sm->sizePsi); 
+
+
+    temp_var = sprod_nn(w_b,w_b,sm->sizePsi);
     proximal_term = 0.0;
     for (i=1;i<sm->sizePsi+1;i++) {
       proximal_term += (w[i]-w_b[i])*(w[i]-w_b[i]);
     }
-    
+
     reg_master_obj = -dual_obj+0.5*rho*temp_var/(1+rho);
     expected_descent = reg_master_obj - primal_obj_b;
 
-    v_k = (reg_master_obj - proximal_term*rho/2) - primal_obj_b; 
+    v_k = (reg_master_obj - proximal_term*rho/2) - primal_obj_b;
 
     primal_lower_bound = MAX(primal_lower_bound, reg_master_obj - 0.5*rho*(1+rho)*proximal_term);
 
@@ -399,9 +399,9 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     printf("ITER RHO: %.4f\n", rho);
     printf("ITER ||w-w_b||^2: %.4f\n", proximal_term);
     printf("ITER PRIMAL_LOWER_BOUND: %.4f\n", primal_lower_bound);
-    printf("ITER V_K: %.4f\n", v_k); 
+    printf("ITER V_K: %.4f\n", v_k);
 #endif
-    obj_difference = primal_obj - primal_obj_b; 
+    obj_difference = primal_obj - primal_obj_b;
 
 
     if (primal_obj<primal_obj_b+kappa*expected_descent) {
@@ -412,45 +412,45 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 #endif
 	/* update cut_error */
 	for (i=0;i<size_active;i++) {
-	  cut_error[i] -= (primal_obj_b - 0.5*sprod_nn(w_b,w_b,sm->sizePsi)); 
-	  cut_error[i] -= C*sprod_ns(w_b, dXc[i]->fvec); 
+	  cut_error[i] -= (primal_obj_b - 0.5*sprod_nn(w_b,w_b,sm->sizePsi));
+	  cut_error[i] -= C*sprod_ns(w_b, dXc[i]->fvec);
 	  cut_error[i] += (primal_obj - 0.5*sprod_nn(w,w,sm->sizePsi));
-	  cut_error[i] += C*sprod_ns(w, dXc[i]->fvec); 
+	  cut_error[i] += C*sprod_ns(w, dXc[i]->fvec);
 	}
 	primal_obj_b = primal_obj;
 	for (i=1;i<sm->sizePsi+1;i++) {
 	  w_b[i] = w[i];
 	}
 	null_step = 0;
-	serious_counter++;	
+	serious_counter++;
       } else {
 	/* increase step size */
 #if (DEBUG_LEVEL>0)
 	printf("NULL STEP: SS(ii) FAILS.\n");
 #endif
-	serious_counter--; 
+	serious_counter--;
 	rho = MAX(rho/10,min_rho);
       }
     } else { /* no sufficient decrease */
-      serious_counter--; 
+      serious_counter--;
       if ((cut_error[size_active-1]>m3*last_sigma_k)&&(fabs(obj_difference)>last_z_k_norm+last_sigma_k)) {
 #if (DEBUG_LEVEL>0)
 	printf("NULL STEP: NS(ii) FAILS.\n");
 #endif
 	rho = MIN(10*rho,max_rho);
-      } 
+      }
 #if (DEBUG_LEVEL>0)
       else printf("NULL STEP\n");
 #endif
     }
     /* update last_sigma_k */
-    last_sigma_k = sigma_k; 
-    last_z_k_norm = z_k_norm; 
+    last_sigma_k = sigma_k;
+    last_z_k_norm = z_k_norm;
 
 
     /* break away from while loop if more than certain proportioal decrease in primal objective */
     if (primal_obj_b/initial_primal_obj<1-decrease_proportion) {
-      suff_decrease_cond = 1; 
+      suff_decrease_cond = 1;
     }
 
     /* clean up */
@@ -465,14 +465,14 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 	sprintf(msg,"ITER %d",iter);
     print_time(iter_start, iter_end, msg);
 #endif
-  } // end cutting plane while loop 
+  } // end cutting plane while loop
 
-  printf(" Inner loop optimization finished.\n"); fflush(stdout); 
-      
+  printf(" Inner loop optimization finished.\n"); fflush(stdout);
+
   /* free memory */
   for (j=0;j<size_active;j++) {
     free(G[j]);
-    free_example(dXc[j],0);	
+    free_example(dXc[j],0);
   }
   free(G);
   free(dXc);
@@ -482,7 +482,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   free(idle);
   free(gammaG0);
   free(proximal_rhs);
-  free(cut_error); 
+  free(cut_error);
 
   /* copy and free */
   for (i=1;i<sm->sizePsi+1;i++) {
@@ -515,12 +515,12 @@ int main(int argc, char* argv[]) {
   SAMPLE sample;
   STRUCT_LEARN_PARM sparm;
   STRUCTMODEL sm;
-  
+
   double decrement;
   double primal_obj, last_primal_obj;
-  double cooling_eps; 
-  double stop_crit; 
- 
+  double cooling_eps;
+  double stop_crit;
+
   LATENT_VAR *imputed_h = NULL;
 
   time_t time_start, time_end;
@@ -550,7 +550,7 @@ int main(int argc, char* argv[]) {
 //  exit(0);
   //test_print(sample);
 
-  
+
   /* initialization */
   init_struct_model(sample,&sm,&sparm,&learn_parm,&kernel_parm);
 
@@ -578,9 +578,9 @@ int main(int argc, char* argv[]) {
   /* some training information */
   printf("C: %.8g\n", C);
   printf("epsilon: %.8g\n", epsilon);
-  printf("sample.n: %ld\n", sample.n); 
+  printf("sample.n: %ld\n", sample.n);
   printf("sm.sizePsi: %ld\n", sm.sizePsi); fflush(stdout);
-  
+
 
   /* impute latent variable for first iteration */
   // Ajay: Already initialised in read_struct_examples
@@ -598,12 +598,12 @@ int main(int argc, char* argv[]) {
 
   /* time taken stats */
   time(&time_start);
-    
+
   /* outer loop: latent variable imputation */
   outer_iter = 0;
   last_primal_obj = 0;
   decrement = 0;
-  cooling_eps = 0.5*C*epsilon; 
+  cooling_eps = 0.5*C*epsilon;
   while ((outer_iter<2)||((!stop_crit)&&(outer_iter<MAX_OUTER_ITER))) {
     printf("OUTER ITER %d\n", outer_iter); fflush(stdout);
     /* cutting plane algorithm */
@@ -617,20 +617,22 @@ int main(int argc, char* argv[]) {
     sprintf(msg,"OUTER ITER %d", outer_iter);
     print_time(cp_start, cp_end, msg);
 #endif
-    
+
     /* compute decrement in objective in this outer iteration */
     decrement = last_primal_obj - primal_obj;
     last_primal_obj = primal_obj;
     printf("primal objective: %.4f\n", primal_obj);
     printf("decrement: %.4f\n", decrement); fflush(stdout);
-    
-    stop_crit = (decrement<C*epsilon)&&(cooling_eps<0.5*C*epsilon+1E-8);
+
+    stop_crit = (decrement<C*epsilon)&&(cooling_eps<0.5*C*epsilon+1E-8);   // NOTE : The primal objective need not always decrease,
+    																	   //the only thing it should follow is stay with limits when it increases
+    																	//  what does cooling eps do>
 
     cooling_eps = -decrement*0.01;
     cooling_eps = MAX(cooling_eps, 0.5*C*epsilon);
-    printf("cooling_eps: %.8g\n", cooling_eps); 
+    printf("cooling_eps: %.8g\n", cooling_eps);
 
-  
+
     /* impute latent variable using updated weight vector */
     for(i = 0; i < m; i ++)
     	free_latent_var(ex[i].h);
@@ -656,13 +658,13 @@ int main(int argc, char* argv[]) {
     }
 
 
-    outer_iter++;  
+    outer_iter++;
   } // end outer loop
-  
+
 
   /* write structural model */
   write_struct_model(modelfile, &sm, &sparm);
-  // skip testing for the moment  
+  // skip testing for the moment
 
   /* free memory */
   free_struct_sample(sample);
@@ -679,8 +681,8 @@ int main(int argc, char* argv[]) {
   print_time(time_start, time_end, "Total time");
 #endif
 
-  return(0); 
-  
+  return(0);
+
 }
 
 void print_time(time_t time_start, time_t time_end, char *msg){
@@ -692,7 +694,7 @@ void print_time(time_t time_start, time_t time_end, char *msg){
 
 void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* modelfile,
 			      LEARN_PARM *learn_parm, KERNEL_PARM *kernel_parm, STRUCT_LEARN_PARM *struct_parm) {
-  
+
   long i;
 
   /* set default */
@@ -702,7 +704,7 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
   //learn_parm->eps=0.001;
   learn_parm->eps=0.1; //AJAY: Changing for faster convergence
   learn_parm->biased_hyperplane=12345; /* store random seed */
-  learn_parm->remove_inconsistent=10; 
+  learn_parm->remove_inconsistent=10;
   kernel_parm->kernel_type=0;
   kernel_parm->rbf_gamma=0.05;
   kernel_parm->coef_lin=1;
@@ -715,10 +717,10 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     switch ((argv[i])[1]) {
     case 'c': i++; learn_parm->svm_c=atof(argv[i]); break;
     case 'e': i++; learn_parm->eps=atof(argv[i]); break;
-    case 's': i++; learn_parm->svm_maxqpsize=atol(argv[i]); break; 
+    case 's': i++; learn_parm->svm_maxqpsize=atol(argv[i]); break;
     case 'g': i++; kernel_parm->rbf_gamma=atof(argv[i]); break;
     case 'd': i++; kernel_parm->poly_degree=atol(argv[i]); break;
-    case 'r': i++; learn_parm->biased_hyperplane=atol(argv[i]); break; 
+    case 'r': i++; learn_parm->biased_hyperplane=atol(argv[i]); break;
     case 't': i++; kernel_parm->kernel_type=atol(argv[i]); break;
     case 'n': i++; learn_parm->maxiter=atol(argv[i]); break;
     case 'p': i++; learn_parm->remove_inconsistent=atol(argv[i]); break;
@@ -746,7 +748,7 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
   if((i+1)<argc) {
     strcpy (modelfile, argv[i+1]);
   }
-  
+
   parse_struct_parameters(struct_parm);
 
 }
@@ -775,10 +777,10 @@ int resize_cleanup(int size_active, int *idle, double *alpha, double *delta, dou
     alpha[i] = alpha[j];
     delta[i] = delta[j];
     gammaG0[i] = gammaG0[j];
-    cut_error[i] = cut_error[j]; 
-    
+    cut_error[i] = cut_error[j];
+
     free(G[i]);
-    G[i] = G[j]; 
+    G[i] = G[j];
     G[j] = NULL;
     free_example(dXc[i],0);
     dXc[i] = dXc[j];
@@ -799,8 +801,8 @@ int resize_cleanup(int size_active, int *idle, double *alpha, double *delta, dou
   proximal_rhs = (double*)realloc(proximal_rhs, sizeof(double)*new_size_active);
   G = (double**)realloc(G, sizeof(double*)*new_size_active);
   dXc = (DOC**)realloc(dXc, sizeof(DOC*)*new_size_active);
-  cut_error = (double*)realloc(cut_error, sizeof(double)*new_size_active); 
-  
+  cut_error = (double*)realloc(cut_error, sizeof(double)*new_size_active);
+
   /* resize G and idle */
   i=0;
   while ((i<size_active)&&(idle[i]<IDLE_ITER)) i++;
@@ -815,7 +817,7 @@ int resize_cleanup(int size_active, int *idle, double *alpha, double *delta, dou
     i++;
     j++;
     while((j<size_active)&&(idle[j]>=IDLE_ITER)) j++;
-  }  
+  }
   idle = (int*)realloc(idle, sizeof(int)*new_size_active);
   for (k=0;k<new_size_active;k++) {
     G[k] = (double*)realloc(G[k], sizeof(double)*new_size_active);
