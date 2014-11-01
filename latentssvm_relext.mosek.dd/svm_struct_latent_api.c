@@ -450,7 +450,7 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 
 	char *cmd = malloc(1000);
 	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
-			" java -Xmx8G -cp java/bin:java/lib/* "
+			" java -Xmx16G -cp java/bin:java/lib/* "
 			" -Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
 			" javaHelpers.FindMaxViolatorHelperAll ");
 	strcat(cmd,filename);

@@ -119,17 +119,27 @@ public class OptimizeLossAugInference {
 			}
 */
 			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter>maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
-				if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT){
+				if(fracSame > simFracParam){
+				
+					System.out.println("[admm] Met the stopping criterion. !!");
+					System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
+					break;
 
 				}
-				else if((prevObjective - objective) >1 ) {
-					matchingCounter =0;
-					continue;
+				else if(t > MAX_ITERS_SUB_DESCENT){
+					System.out.println("[admm] Met the stopping criterion. !!");
+					System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
+					break;
+
 				}
-				
-				System.out.println("[admm] Met the stopping criterion. !!");
-				System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
-				break;
+				else if(prevObjective - objective > 1){
+				  matchingCounter=0;
+				}
+				else{
+					System.out.println("[admm] Met the stopping criterion. !!");
+					System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
+					break;
+				}
 			}
 			else{
 				prevFracSame = fracSame;
