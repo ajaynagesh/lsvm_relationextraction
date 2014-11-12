@@ -158,7 +158,9 @@ public class FindMaxViolatorHelperAll {
 		if(args[4] != null){
 			rho = Double.parseDouble(args[4]);
 			System.out.println("[admm] Log: Local search based dual decomposition");
-			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD_ADMM(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np, rho);
+			boolean isExhaustive = Integer.parseInt(args[5]) == 1 ? true : false; 
+			boolean isLPrelaxation = Integer.parseInt(args[6]) == 1 ? true : false;
+			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD_ADMM(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np, rho, isExhaustive, isLPrelaxation);
 		}
 		else {
 			System.out.println(" Log: Local search based dual decomposition");

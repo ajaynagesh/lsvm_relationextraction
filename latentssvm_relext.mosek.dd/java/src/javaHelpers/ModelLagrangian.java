@@ -32,7 +32,7 @@ public class ModelLagrangian {
 		long start = System.currentTimeMillis();
 		long curtime = System.currentTimeMillis();
 		double inittime = (curtime - start) / 1000.0;
-		System.err.println("[admm] Log: FindMaxViolatorHelperAll: Init -- time taken " + inittime + " s.");
+		System.err.println("[admm] Log: FindMaxViolatorHelperAll (ILP): Init -- time taken " + inittime + " s.");
 		long prevtime = curtime;
 
 		double modelObj =  0;
@@ -44,7 +44,7 @@ public class ModelLagrangian {
 			if(i % 10000 == 0){
 				curtime = System.currentTimeMillis();
 				double timeTaken = (curtime - prevtime)/1000.0;
-				System.err.println("[admm] Log: FindMaxViolatorHelperAll: Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
+				System.err.println("[admm] Log: FindMaxViolatorHelperAll (ILP): Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
 				prevtime = curtime;
 			}
 
@@ -70,12 +70,61 @@ public class ModelLagrangian {
 
 		long end = System.currentTimeMillis();
 		double totTime = (end - start) / 1000.0; 
-		System.err.println("[admm] Log: FindMaxViolatorHelperAll: Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
+		System.err.println("[admm] Log: FindMaxViolatorHelperAll (ILP): Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
 
 		return new Pair<ArrayList<YZPredicted>, Double>(YtildeDashStar, modelObj) ;
 
 	}
 	
+	public static Pair<ArrayList<YZPredicted>, Double> optModelLagAugmentedLPrelaxation(ArrayList<DataItem> dataset, 
+			LabelWeights [] zWeights, double Lambda[][], ArrayList<YZPredicted> YtildeStar, double rho) throws IloException{
+
+		long start = System.currentTimeMillis();
+		long curtime = System.currentTimeMillis();
+		double inittime = (curtime - start) / 1000.0;
+		System.err.println("[admm] Log: FindMaxViolatorHelperAll (LP): Init -- time taken " + inittime + " s.");
+		long prevtime = curtime;
+
+		double modelObj =  0;
+		
+		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
+
+		for(int i = 0; i < dataset.size(); i++){
+
+			if(i % 10000 == 0){
+				curtime = System.currentTimeMillis();
+				double timeTaken = (curtime - prevtime)/1000.0;
+				System.err.println("[admm] Log: FindMaxViolatorHelperAll (LP): Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
+				prevtime = curtime;
+			}
+
+			DataItem example = dataset.get(i);
+			int [] yLabelsGold = example.ylabel;
+			int numMentions = example.pattern.size();
+			ArrayList<Counter<Integer>> pattern = example.pattern; 
+
+			List<Counter<Integer>> scores = Utils.computeScores(pattern, zWeights, yLabelsGold);
+
+			Set<Integer> yLabelsSetGold = new HashSet<Integer>();
+			for(int y : yLabelsGold)  
+				yLabelsSetGold.add(y);
+			
+			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM_LPrelaxation(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho);
+			YZPredicted yz = result.first();
+			modelObj += result.second();
+			
+			// TODO: check the ilp method once completely for the correct formulation
+
+			YtildeDashStar.add(yz);	
+		}
+
+		long end = System.currentTimeMillis();
+		double totTime = (end - start) / 1000.0; 
+		System.err.println("[admm] Log: FindMaxViolatorHelperAll (LP): Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
+
+		return new Pair<ArrayList<YZPredicted>, Double>(YtildeDashStar, modelObj) ;
+
+	}
 	public static Pair<ArrayList<YZPredicted>, Double> optModelLag(ArrayList<DataItem> dataset, 
 			LabelWeights [] zWeights, double Lambda[][]) throws IloException{
 
@@ -169,6 +218,52 @@ public class ModelLagrangian {
 		
 		return new Pair<YZPredicted, Double>(predictedVals, cplexILPModel.getObjValue());
 	}
+
+	static Pair<YZPredicted,Double> buildAndSolveCplexILPModelADMM_LPrelaxation( List<Counter<Integer>> scores,
+			  int numOfMentions,
+			  int nilIndex,
+			  double [][] lambda,
+			  int numOfLabels,
+			  int i, 
+			  YZPredicted YtildeStar_i, 
+			  double rho) throws IloException{
+				
+				YZPredicted predictedVals = new YZPredicted(numOfMentions);
+				Counter<Integer> yPredicted = predictedVals.getYPredicted();
+				int [] zPredicted = predictedVals.getZPredicted();
+				
+				IloCplex cplexILPModel = new IloCplex();
+				//IloNumVarType varType   = IloNumVarType.Int; 
+				
+				// create variables
+				Pair<ArrayList<IloNumVar[]>, IloNumVar[]> variables =  createVariablesLP(cplexILPModel, numOfMentions, numOfLabels);
+				ArrayList<IloNumVar[]> hiddenvars = variables.first();
+				IloNumVar[] ytildedash = variables.second();
+				// create the model
+				buildILPModelADMM(cplexILPModel, hiddenvars, ytildedash, scores, lambda[i], numOfMentions, numOfLabels, YtildeStar_i, rho);
+				
+				// solve the model
+				if ( cplexILPModel.solve() ) {
+					System.out.println("Solution status = " + cplexILPModel.getStatus());
+					System.out.println(" cost = " + cplexILPModel.getObjValue());
+				}
+				
+				for(int m = 0; m < numOfMentions; m++){
+					for(int l = 1; l < numOfLabels; l++){
+						if(cplexILPModel.getValue(hiddenvars.get(m)[l]) >= 0.5){
+							zPredicted[m] = l;
+						}
+					}
+				}
+				
+				// Do not set the nil label 
+				for(int l=1; l<=numOfLabels-1; l ++){
+					if(cplexILPModel.getValue(ytildedash[l-1]) >= 0.5) // Note 'l-1' here
+						yPredicted.setCount(l, 1);
+				}
+				
+				return new Pair<YZPredicted, Double>(predictedVals, cplexILPModel.getObjValue());
+			}
 	
 	static Pair<YZPredicted,Double> buildAndSolveCplexILPModelADMM( List<Counter<Integer>> scores,
 			  int numOfMentions,
@@ -184,7 +279,7 @@ public class ModelLagrangian {
 				int [] zPredicted = predictedVals.getZPredicted();
 				
 				IloCplex cplexILPModel = new IloCplex();
-				IloNumVarType varType   = IloNumVarType.Int; 
+				//IloNumVarType varType   = IloNumVarType.Int; 
 				
 				// create variables
 				Pair<ArrayList<IloNumVar[]>, IloNumVar[]> variables =  createVariables(cplexILPModel, numOfMentions, numOfLabels);
@@ -324,6 +419,22 @@ public class ModelLagrangian {
 		
 		// ytildedash variables
 		IloNumVar[] ytildedash = cplexILPModel.intVarArray(numOfLabels-1, 0, 1); // No need to create the NIL label. Label indices are shifted by -1
+		
+		return (new  Pair<ArrayList<IloNumVar[]>, IloNumVar[]>(hiddenvars, ytildedash));
+		
+	}
+	
+	static Pair<ArrayList<IloNumVar[]>, IloNumVar[]> createVariablesLP(IloCplex cplexILPModel, int numOfMentions, int numOfLabels) throws IloException{
+		ArrayList<IloNumVar[]> hiddenvars  = new ArrayList<IloNumVar[]>();
+		
+		// Hidden variables array
+		for(int i = 0; i < numOfMentions; i ++){
+			IloNumVar[] h_mention = cplexILPModel.numVarArray(numOfLabels, 0, 1);
+			hiddenvars.add(h_mention);
+		}
+		
+		// ytildedash variables
+		IloNumVar[] ytildedash = cplexILPModel.numVarArray(numOfLabels-1, 0, 1); // No need to create the NIL label. Label indices are shifted by -1
 		
 		return (new  Pair<ArrayList<IloNumVar[]>, IloNumVar[]>(hiddenvars, ytildedash));
 		

@@ -216,7 +216,7 @@ public class LossLagrangian {
 		double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices);
 		double maxNeighbourLoss = Double.NEGATIVE_INFINITY;
 		Pair<Integer, Integer> bestNeighbour = null; 
-		System.out.println("[admm] Log: Starting point  .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+		System.out.println("[admm] Log: Starting point (Local Search) .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
 		
 		/// Local search
 		while(true){
@@ -238,12 +238,12 @@ public class LossLagrangian {
 			else {
 				currentLoss = maxNeighbourLoss;
 				current_FP_FN = bestNeighbour;
-				System.out.println("[admm] Log: Local Search -- intermediate points .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+				System.out.println("[admm] Log: (Local Search) -- intermediate points .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
 			}
 			
 		}
 		
-		System.out.println("[admm] Log: Local Search -- BEST POINT .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+		System.out.println("[admm] Log: (Local Search) -- BEST POINT .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
 			
 		/// current_FP_FN is the best seen. Return the Y' corresponding to this setting.
 		int FP = current_FP_FN.first();
@@ -289,6 +289,93 @@ public class LossLagrangian {
 		}
 		
 		return new Pair<ArrayList<YZPredicted>, Double>(YtildeStar, currentLoss);
+
+	}
+	
+	public static Pair<ArrayList<YZPredicted>,Double> optLossLagAugmentedExhaustive (ArrayList<DataItem> dataset, 
+			int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np, ArrayList<YZPredicted> YtildeDashStar, double rho){
+		
+		//// IMPT NOTE: This is the 2nd type of LossLagrangian which does not need piece-wise linear approximation. 
+		//// For comparison use an exhaustive search in the space of FPs and FNs and find the y' based on the \lambda's set from previous iterations
+//
+//		1- Exhaustive search in the grid of FP and FN
+//		2- For every (fp',fn') in grid(FP,FN) // 0 ... FP, 0 ... FN
+//		3-         compute z_fp',fn' as above 
+//		4-    (fp'',fn'') = argmax_{fp',fn'} z_fp',fn'
+//		5- return y' corresponding to (fp'',fn'')
+//
+				
+		ArrayList<YZPredicted> YtildeStar= new ArrayList<YZPredicted>();
+						
+		/// Build indices of +ve and -ve points sorted on current Lambda values
+		Pair<IndexPtAugmented[], IndexPtAugmented[]> indices = buildAndSortIndicesADMM(dataset, Lambda, Np, maxFP, numPosLabels, YtildeDashStar, rho);
+		IndexPtAugmented[] positiveIndices = indices.first();
+		IndexPtAugmented[] negativeIndices = indices.second();
+		
+		double maxLoss = Double.NEGATIVE_INFINITY;
+		Pair<Integer, Integer> bestPoint = null; 
+		
+		/// Exhaustive search
+		for(int i = 0; i <= maxFP; i ++){
+			for(int j = 0; j <= maxFN; j ++){
+
+				Pair<Integer, Integer> current_FP_FN = new Pair<Integer, Integer>(i, j);
+
+				double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices);
+
+				if(currentLoss > maxLoss){
+					maxLoss = currentLoss;
+					bestPoint = current_FP_FN;
+				}
+			}
+		}
+		
+		System.out.println("[admm] Log: (Exhaustive Search) -- BEST POINT .... " + maxLoss + " : (" + bestPoint.first() +  ", "+ bestPoint.second() + ")");
+			
+		/// current_FP_FN is the best seen. Return the Y' corresponding to this setting.
+		int FP = bestPoint.first();
+		int FN = bestPoint.second();
+		HashMap<Integer, ArrayList<Integer>> finalIndicesToBeSet = new HashMap<Integer, ArrayList<Integer>>();
+		
+		for(int i = 0; i < FP; i ++){
+			int egId = negativeIndices[i].egId;
+			if(finalIndicesToBeSet.containsKey(egId)){
+				finalIndicesToBeSet.get(egId).add(negativeIndices[i].label);
+			}
+			else {
+				ArrayList<Integer> labels = new ArrayList<Integer>();
+				labels.add(negativeIndices[i].label);
+				finalIndicesToBeSet.put(egId, labels);
+			}
+			 
+		}
+		for(int i = 0; i < positiveIndices.length - FN; i ++){
+			int egId = positiveIndices[i].egId;
+			if(finalIndicesToBeSet.containsKey(egId)){
+				finalIndicesToBeSet.get(egId).add(positiveIndices[i].label);
+			}
+			else {
+				ArrayList<Integer> labels = new ArrayList<Integer>();
+				labels.add(positiveIndices[i].label);
+				finalIndicesToBeSet.put(egId, labels);
+			}
+		}
+		
+		for(int egId = 0; egId < dataset.size(); egId ++){
+			
+			ArrayList<Integer> labels = finalIndicesToBeSet.get(egId);
+			
+			YZPredicted yz_i = new YZPredicted(0);
+			if(labels != null){
+				for(int l : labels)
+					yz_i.yPredicted.incrementCount(l);
+			}
+			
+			YtildeStar.add(yz_i);
+			
+		}
+		
+		return new Pair<ArrayList<YZPredicted>, Double>(YtildeStar, maxLoss);
 
 	}
 	

@@ -193,6 +193,8 @@ typedef struct learn_parm {
   double Fweight;
   char dataset_stats_file[500];
   double rho_admm;
+  long isExhaustive;
+  long isLPrelaxation;
 
 } LEARN_PARM;
 

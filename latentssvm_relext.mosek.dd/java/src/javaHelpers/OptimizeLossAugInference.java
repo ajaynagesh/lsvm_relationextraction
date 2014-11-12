@@ -42,7 +42,8 @@ public class OptimizeLossAugInference {
 	}
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD_ADMM(ArrayList<DataItem> dataset,
-			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np, double rho) throws IOException, IloException, InterruptedException, ExecutionException{
+			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np, double rho, 
+			boolean isExhaustive, boolean isLPrelaxation) throws IOException, IloException, InterruptedException, ExecutionException{
 
 		//TODO: check if zWeights.length also includes the nil label
 		
@@ -76,7 +77,12 @@ public class OptimizeLossAugInference {
 
 			//******* Loss Lag *****************************************************
 			//YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, regions, Lambda);
-			Pair<ArrayList<YZPredicted>, Double> resultLoss = LossLagrangian.optLossLagAugmented(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho);
+			Pair<ArrayList<YZPredicted>, Double> resultLoss;
+			if(!isExhaustive)
+				resultLoss = LossLagrangian.optLossLagAugmented(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho);
+			else
+				resultLoss = LossLagrangian.optLossLagAugmentedExhaustive(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho);
+			
 			YtildeStar = resultLoss.first();
 			double lossObj = resultLoss.second();
 			
@@ -85,7 +91,12 @@ public class OptimizeLossAugInference {
 			System.out.println("[admm] Ajay: Time taken loss lag : " + timelosslag + " s.");
 			
 			/// ****** Model Lag ***************************************************
-			Pair<ArrayList<YZPredicted>, Double> resultModel =  ModelLagrangian.optModelLagAugmented(dataset, zWeights, Lambda, YtildeStar, rho);
+			Pair<ArrayList<YZPredicted>, Double> resultModel;
+			if(!isLPrelaxation)
+				resultModel =  ModelLagrangian.optModelLagAugmented(dataset, zWeights, Lambda, YtildeStar, rho);
+			else
+				resultModel =  ModelLagrangian.optModelLagAugmentedLPrelaxation(dataset, zWeights, Lambda, YtildeStar, rho);
+			
 			YtildeDashStar = resultModel.first();
 			double modelObj = resultModel.second();
 			//YtildeDashStar = ModelLagrangian.optModelLag_lpsolve_threaded(dataset, zWeights, Lambda);
@@ -94,7 +105,8 @@ public class OptimizeLossAugInference {
 			double timemodellag = (double) (endmodellag - endlosslag) / 1000.0;
 			System.out.println("[admm] Ajay: Time taken model lag : " + timemodellag + " s.");
 			
-			double fracSame = fractionSame_labelwiseComparison(YtildeStar, YtildeDashStar, zWeights.length-1);
+			//double fracSame = fractionSame_labelwiseComparison(YtildeStar, YtildeDashStar, zWeights.length-1);
+			double fracSame = fractionSame(YtildeStar, YtildeDashStar); // NOTE: All the labels in the current datapoint has to be same
 			
 			objective = (lossObj + modelObj);
 			

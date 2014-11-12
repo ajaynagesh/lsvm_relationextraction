@@ -70,7 +70,7 @@ double* add_list_nn(SVECTOR *a, long totwords)
 }
 
 
-SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm) {
+SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -88,7 +88,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   time_t mv_start, mv_end;
 
   time(&mv_start);
-  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file, rho_admm);
+  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation);
   time(&mv_end);
 
 #if (DEBUG_LEVEL==1)
@@ -161,7 +161,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 }
 
 
-double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm) {
+double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation ) {
   long i,j;
   double xi;
   double *alpha;
@@ -227,7 +227,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   cut_error = NULL; 
 
   printf("ITER 0 \n(before cutting plane) \n");
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm);
+  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation);
   value = margin - sprod_ns(w, new_constraint);
 	
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value;
@@ -609,7 +609,8 @@ int main(int argc, char* argv[]) {
     /* cutting plane algorithm */
     time_t cp_start, cp_end;
     time(&cp_start);
-    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file, learn_parm.rho_admm);
+    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file,
+    		learn_parm.rho_admm, learn_parm.isExhaustive, learn_parm.isLPrelaxation);
     time(&cp_end);
 
 #if(DEBUG_LEVEL==1)
@@ -729,6 +730,8 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'z': i++; strcpy(learn_parm->dataset_stats_file,argv[i]);printf("Dataset Stats file is %s\n",learn_parm->dataset_stats_file);break;
     case 'w': i++; learn_parm->Fweight=atof(argv[i]); printf("Weigting param of F is %g\n",learn_parm->Fweight);break;
     case 'o': i++; learn_parm->rho_admm=atof(argv[i]); printf("Rho is %g\n", learn_parm->rho_admm); break;
+    case 'a': i++; learn_parm->isExhaustive=atol(argv[i]);printf("isExhaustive is %ld",learn_parm->isExhaustive); break;
+    case 'b': i++; learn_parm->isLPrelaxation=atol(argv[i]);printf("isLPrelaxation is %ld",learn_parm->isLPrelaxation); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);
       exit(0);
