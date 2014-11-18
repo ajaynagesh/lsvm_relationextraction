@@ -465,9 +465,11 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 	char rho_str[5]; sprintf(rho_str,"%g", rho_admm);
 	strcat(cmd, rho_str);
 	strcat(cmd, " ");
-	strcat(cmd, isExhaustive);
+	char isExhaustive_str[5]; sprintf(isExhaustive_str,"%ld", isExhaustive);
+	strcat(cmd, isExhaustive_str);
 	strcat(cmd, " ");
-	strcat(cmd, isLPrelaxation);
+	char isLPrelaxation_str[5]; sprintf(isLPrelaxation_str,"%ld", isLPrelaxation);
+	strcat(cmd, isLPrelaxation_str);
 
 	printf("Executing cmd : %s\n", cmd);fflush(stdout);
 	system(cmd);
