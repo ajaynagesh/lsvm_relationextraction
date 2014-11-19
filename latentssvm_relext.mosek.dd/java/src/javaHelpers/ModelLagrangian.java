@@ -32,7 +32,7 @@ public class ModelLagrangian {
 		long start = System.currentTimeMillis();
 		long curtime = System.currentTimeMillis();
 		double inittime = (curtime - start) / 1000.0;
-		System.err.println("[admm] Log: FindMaxViolatorHelperAll (ILP): Init -- time taken " + inittime + " s.");
+		System.err.println("[combine hamming + F1] Log: FindMaxViolatorHelperAll (ILP): Init -- time taken " + inittime + " s.");
 		long prevtime = curtime;
 
 		double modelObj =  0;
@@ -44,7 +44,7 @@ public class ModelLagrangian {
 			if(i % 10000 == 0){
 				curtime = System.currentTimeMillis();
 				double timeTaken = (curtime - prevtime)/1000.0;
-				System.err.println("[admm] Log: FindMaxViolatorHelperAll (ILP): Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
+				System.err.println("[combine hamming + F1] Log: FindMaxViolatorHelperAll (ILP): Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
 				prevtime = curtime;
 			}
 
@@ -59,7 +59,7 @@ public class ModelLagrangian {
 			for(int y : yLabelsGold)  
 				yLabelsSetGold.add(y);
 			
-			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho);
+			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho, yLabelsSetGold);
 			YZPredicted yz = result.first();
 			modelObj += result.second();
 			
@@ -70,7 +70,7 @@ public class ModelLagrangian {
 
 		long end = System.currentTimeMillis();
 		double totTime = (end - start) / 1000.0; 
-		System.err.println("[admm] Log: FindMaxViolatorHelperAll (ILP): Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
+		System.err.println("[combine hamming + F1] Log: FindMaxViolatorHelperAll (ILP): Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
 
 		return new Pair<ArrayList<YZPredicted>, Double>(YtildeDashStar, modelObj) ;
 
@@ -82,7 +82,7 @@ public class ModelLagrangian {
 		long start = System.currentTimeMillis();
 		long curtime = System.currentTimeMillis();
 		double inittime = (curtime - start) / 1000.0;
-		System.err.println("[admm] Log: FindMaxViolatorHelperAll (LP): Init -- time taken " + inittime + " s.");
+		System.err.println("[combine hamming + F1] Log: FindMaxViolatorHelperAll (LP): Init -- time taken " + inittime + " s.");
 		long prevtime = curtime;
 
 		double modelObj =  0;
@@ -94,7 +94,7 @@ public class ModelLagrangian {
 			if(i % 10000 == 0){
 				curtime = System.currentTimeMillis();
 				double timeTaken = (curtime - prevtime)/1000.0;
-				System.err.println("[admm] Log: FindMaxViolatorHelperAll (LP): Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
+				System.err.println("[combine hamming + F1] Log: FindMaxViolatorHelperAll (LP): Finished processing " + i + " examples in " + timeTaken + " s. (cplex)");	
 				prevtime = curtime;
 			}
 
@@ -109,7 +109,7 @@ public class ModelLagrangian {
 			for(int y : yLabelsGold)  
 				yLabelsSetGold.add(y);
 			
-			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM_LPrelaxation(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho);
+			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM_LPrelaxation(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho, yLabelsSetGold);
 			YZPredicted yz = result.first();
 			modelObj += result.second();
 			
@@ -120,7 +120,7 @@ public class ModelLagrangian {
 
 		long end = System.currentTimeMillis();
 		double totTime = (end - start) / 1000.0; 
-		System.err.println("[admm] Log: FindMaxViolatorHelperAll (LP): Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
+		System.err.println("[combine hamming + F1] Log: FindMaxViolatorHelperAll (LP): Total time taken for " + dataset.size() + " number of examples (and init): " + totTime + " s.");
 
 		return new Pair<ArrayList<YZPredicted>, Double>(YtildeDashStar, modelObj) ;
 
@@ -226,7 +226,8 @@ public class ModelLagrangian {
 			  int numOfLabels,
 			  int i, 
 			  YZPredicted YtildeStar_i, 
-			  double rho) throws IloException{
+			  double rho,
+			  Set<Integer> ylabelsGold) throws IloException{
 				
 				YZPredicted predictedVals = new YZPredicted(numOfMentions);
 				Counter<Integer> yPredicted = predictedVals.getYPredicted();
@@ -240,7 +241,7 @@ public class ModelLagrangian {
 				ArrayList<IloNumVar[]> hiddenvars = variables.first();
 				IloNumVar[] ytildedash = variables.second();
 				// create the model
-				buildILPModelADMM(cplexILPModel, hiddenvars, ytildedash, scores, lambda[i], numOfMentions, numOfLabels, YtildeStar_i, rho);
+				buildILPModelADMM(cplexILPModel, hiddenvars, ytildedash, scores, lambda[i], numOfMentions, numOfLabels, YtildeStar_i, rho, ylabelsGold);
 				
 				// solve the model
 				if ( cplexILPModel.solve() ) {
@@ -272,7 +273,8 @@ public class ModelLagrangian {
 			  int numOfLabels,
 			  int i, 
 			  YZPredicted YtildeStar_i, 
-			  double rho) throws IloException{
+			  double rho,
+			  Set<Integer> ylabelsGold) throws IloException{
 				
 				YZPredicted predictedVals = new YZPredicted(numOfMentions);
 				Counter<Integer> yPredicted = predictedVals.getYPredicted();
@@ -286,7 +288,7 @@ public class ModelLagrangian {
 				ArrayList<IloNumVar[]> hiddenvars = variables.first();
 				IloNumVar[] ytildedash = variables.second();
 				// create the model
-				buildILPModelADMM(cplexILPModel, hiddenvars, ytildedash, scores, lambda[i], numOfMentions, numOfLabels, YtildeStar_i, rho);
+				buildILPModelADMM(cplexILPModel, hiddenvars, ytildedash, scores, lambda[i], numOfMentions, numOfLabels, YtildeStar_i, rho, ylabelsGold);
 				
 				// solve the model
 				if ( cplexILPModel.solve() ) {
@@ -358,9 +360,9 @@ public class ModelLagrangian {
 		}
 			
 	}
-	
+		
 	static void buildILPModelADMM(IloCplex cplexILPModel, ArrayList<IloNumVar[]> hiddenvars, IloNumVar[] ytildedash, 
-			List<Counter<Integer>> scores, double [] lambda_i, int numOfMentions, int numOfLabels, YZPredicted ytildestar_i, double rho) throws IloException{
+			List<Counter<Integer>> scores, double [] lambda_i, int numOfMentions, int numOfLabels, YZPredicted ytildestar_i, double rho, Set<Integer> ylabelsGold) throws IloException{
 
 		IloLinearNumExpr objective = cplexILPModel.linearNumExpr();
 		
@@ -374,7 +376,15 @@ public class ModelLagrangian {
 		
 		// l = 1 to not count the zero label; ytildedash indices start from 0 (and there are 'numLabels - 1' variables)
 		for(int l = 1; l <= numOfLabels-1 ; l++){
-			double coeff = - lambda_i[l] - (rho * ytildestar_i.getYPredicted().getCount(l) ) + (rho/2); // note adding the last term to coeff  
+			double coeff = - lambda_i[l] - (rho * ytildestar_i.getYPredicted().getCount(l) ) + (rho/2); // note adding the last term to coeff
+			
+			// To augment hamming loss into the model lagrangian
+			
+			if(ylabelsGold.contains(l))
+				coeff -= 1;
+			else
+				coeff += 1;
+			
 			objective.addTerm(coeff, ytildedash[l-1]); // Note 'l-1' here
 		}
 		

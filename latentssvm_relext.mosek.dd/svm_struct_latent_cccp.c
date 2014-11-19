@@ -70,7 +70,7 @@ double* add_list_nn(SVECTOR *a, long totwords)
 }
 
 
-SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation) {
+SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double *margin2) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -100,6 +100,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   lossval = lossF1(ex, m, ybar_all, sparm, Fweight);
   *margin = lossval;
 
+  *margin2 = 0;
   for (i=0;i<m;i++) {
     //find_most_violated_constraint_marginrescaling(ex[i].x, ex[i].y, &ybar, &hbar, sm, sparm);
     ybar = ybar_all[i];
@@ -107,7 +108,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
     /* get difference vector */
     fy = copy_svector(fycache[i]);
     fybar = psi(ex[i].x,ybar,hbar,sm,sparm);
-    //lossval = loss(ex[i].y,ybar,hbar,sparm);
+    lossval = loss(ex[i].y,ybar,hbar,sparm);
     free_label(ybar);
     free_latent_var(hbar);
 
@@ -124,7 +125,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
     append_svector_list(fy,lhs);
     append_svector_list(fybar,fy);
     lhs = fybar;
-    //*margin+=lossval/m;
+    *margin2+=lossval/m;
     //*margin+=lossval*ex[i].x.example_cost/m;
   }
 
@@ -161,7 +162,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 }
 
 
-double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation ) {
+double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash ) {
   long i,j;
   double xi;
   double *alpha;
@@ -227,11 +228,12 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   cut_error = NULL; 
 
   printf("ITER 0 \n(before cutting plane) \n");
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation);
-  value = margin - sprod_ns(w, new_constraint);
+  double margin2;
+  new_constraint = (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
+  value = margin2 - sprod_ns(w, new_constraint);
 	
-  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value;
-  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value;
+  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
+  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
   primal_lower_bound = 0;
   expected_descent = -primal_obj_b;
   initial_primal_obj = primal_obj_b; 
@@ -263,7 +265,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
     delta = (double*)realloc(delta, sizeof(double)*size_active);
     assert(delta!=NULL);
-    delta[size_active-1] = margin;
+    delta[size_active-1] = margin2; // Ajay: changing for the formulation combining hamming and F1loss
     alpha = (double*)realloc(alpha, sizeof(double)*size_active);
     assert(alpha!=NULL);
     alpha[size_active-1] = 0.0;
@@ -368,12 +370,12 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
       }
     }
 
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation);
+  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
  //   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
-    value = margin - sprod_ns(w, new_constraint);
+    value = margin2 - sprod_ns(w, new_constraint);
 
     /* print primal objective */
-    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value;
+    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
      
 #if (DEBUG_LEVEL>0)
     printf("ITER PRIMAL_OBJ %.4f\n", primal_obj); fflush(stdout);
@@ -504,7 +506,7 @@ int main(int argc, char* argv[]) {
   double *w; /* weight vector */
   int outer_iter;
   long m, i;
-  double C, epsilon;
+  double C, epsilon, Cdash;
   LEARN_PARM learn_parm;
   KERNEL_PARM kernel_parm;
   char trainfile[1024];
@@ -531,6 +533,7 @@ int main(int argc, char* argv[]) {
 
   epsilon = learn_parm.eps;
   C = learn_parm.svm_c;
+  Cdash = learn_parm.Cdash;
   MAX_ITER = learn_parm.maxiter;
 
   /* read in examples */
@@ -578,6 +581,7 @@ int main(int argc, char* argv[]) {
 
   /* some training information */
   printf("C: %.8g\n", C);
+  printf("Cdash: %.8g\n", Cdash);
   printf("epsilon: %.8g\n", epsilon);
   printf("sample.n: %ld\n", sample.n); 
   printf("sm.sizePsi: %ld\n", sm.sizePsi); fflush(stdout);
@@ -611,7 +615,7 @@ int main(int argc, char* argv[]) {
     time_t cp_start, cp_end;
     time(&cp_start);
     primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file,
-    		learn_parm.rho_admm, learn_parm.isExhaustive, learn_parm.isLPrelaxation);
+    		learn_parm.rho_admm, learn_parm.isExhaustive, learn_parm.isLPrelaxation, Cdash);
     time(&cp_end);
 
 #if(DEBUG_LEVEL==1)
@@ -733,6 +737,7 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'o': i++; learn_parm->rho_admm=atof(argv[i]); printf("Rho is %g\n", learn_parm->rho_admm); break;
     case 'a': i++; learn_parm->isExhaustive=atol(argv[i]);printf("isExhaustive is %ld",learn_parm->isExhaustive); break;
     case 'b': i++; learn_parm->isLPrelaxation=atol(argv[i]);printf("isLPrelaxation is %ld",learn_parm->isLPrelaxation); break;
+    case 'C': i++; learn_parm->Cdash=atof(argv[i]); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);
       exit(0);

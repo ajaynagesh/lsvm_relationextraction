@@ -88,7 +88,7 @@ public class OptimizeLossAugInference {
 			
 			long endlosslag = System.currentTimeMillis();
 			double timelosslag = (double)(endlosslag - startiter) / 1000.0;
-			System.out.println("[admm] Ajay: Time taken loss lag : " + timelosslag + " s.");
+			System.out.println("[combine hamming + F1] Ajay: Time taken loss lag : " + timelosslag + " s.");
 			
 			/// ****** Model Lag ***************************************************
 			Pair<ArrayList<YZPredicted>, Double> resultModel;
@@ -103,7 +103,7 @@ public class OptimizeLossAugInference {
 
 			long endmodellag = System.currentTimeMillis();
 			double timemodellag = (double) (endmodellag - endlosslag) / 1000.0;
-			System.out.println("[admm] Ajay: Time taken model lag : " + timemodellag + " s.");
+			System.out.println("[combine hamming + F1] Ajay: Time taken model lag : " + timemodellag + " s.");
 			
 			//double fracSame = fractionSame_labelwiseComparison(YtildeStar, YtildeDashStar, zWeights.length-1);
 			double fracSame = fractionSame(YtildeStar, YtildeDashStar); // NOTE: All the labels in the current datapoint has to be same
@@ -111,7 +111,7 @@ public class OptimizeLossAugInference {
 			objective = (lossObj + modelObj);
 			
 			System.out.println("-------------------------------------");
-			System.out.println("[admm] Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective + " match count is " + matchingCounter);
+			System.out.println("[combine hamming + F1] Subgradient-descent: In Iteration " + t + ": Between Ytilde and YtildeStar, fraction of same labels is : " + fracSame + "\tObjective Value : " + objective + " match count is " + matchingCounter);
 			System.out.println("-------------------------------------");
 			if(Math.abs(prevFracSame -fracSame) <0.01){
 				matchingCounter++;
@@ -133,14 +133,14 @@ public class OptimizeLossAugInference {
 			if(fracSame > simFracParam || t > MAX_ITERS_SUB_DESCENT || matchingCounter>maxMatchCount) { // || both YtildeStar and YtildeDashStar are equal
 				if(fracSame > simFracParam){
 				
-					System.out.println("[admm] Met the stopping criterion. !!");
-					System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
+					System.out.println("[combine hamming + F1] Met the stopping criterion. !!");
+					System.out.println("[combine hamming + F1] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
 					break;
 
 				}
 				else if(t > MAX_ITERS_SUB_DESCENT){
-					System.out.println("[admm] Met the stopping criterion. !!");
-					System.out.println("[admm] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
+					System.out.println("[combine hamming + F1] Met the stopping criterion. !!");
+					System.out.println("[combine hamming + F1] Fraction of same labels is  : " + fracSame + "; Num of iters completed : " + t + "\tObjective diff : " + Math.abs(objective-prevObjective));				
 					break;
 
 				}

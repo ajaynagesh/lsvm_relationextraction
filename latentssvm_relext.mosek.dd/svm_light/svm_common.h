@@ -195,6 +195,7 @@ typedef struct learn_parm {
   double rho_admm;
   long isExhaustive;
   long isLPrelaxation;
+  double Cdash;
 
 } LEARN_PARM;
 
