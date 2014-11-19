@@ -229,7 +229,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
   printf("ITER 0 \n(before cutting plane) \n");
   double margin2;
-  new_constraint = (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
+  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
   value = margin2 - sprod_ns(w, new_constraint);
 	
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
