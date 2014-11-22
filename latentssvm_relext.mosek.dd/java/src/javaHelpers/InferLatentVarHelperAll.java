@@ -196,6 +196,8 @@ public class InferLatentVarHelperAll {
 				int [] zUpdate = new int[numOfMentions];
 				
 				IloCplex cplexILPModel = new IloCplex();
+				
+				cplexILPModel.setOut(null);
 				//IloNumVarType varType   = IloNumVarType.Int; 
 				
 				// create variables
@@ -211,8 +213,14 @@ public class InferLatentVarHelperAll {
 				
 				for(int m = 0; m < numOfMentions; m++){
 					for(int l = 0; l < numOfLabels; l++){
-						if(cplexILPModel.getValue(hiddenvars.get(m)[l]) == 1){
-							zUpdate[m] = l;
+						try {
+							if(cplexILPModel.getValue(hiddenvars.get(m)[l]) == 1){
+								zUpdate[m] = l;
+							}
+						} catch (IloCplex.UnknownObjectException e) {
+							// Do nothing for this exception
+							
+							//e.printStackTrace();
 						}
 					}
 				}
