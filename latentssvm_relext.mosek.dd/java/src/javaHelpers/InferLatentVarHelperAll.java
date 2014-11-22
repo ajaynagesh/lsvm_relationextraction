@@ -318,9 +318,9 @@ public class InferLatentVarHelperAll {
 				yLabelsSetGold.add(y);
 
 			InferenceWrappers ilp = new InferenceWrappers();
-			//int zlabels[] =  ilp.generateZUpdateILP(scores, numMentions, yLabelsSetGold, 0);
+			int zlabels[] =  ilp.generateZUpdateILP(scores, numMentions, yLabelsSetGold, 0);
 			// Calling the equivalent code in CPLEX
-			int zlabels[] =  buildAndSolveCplexILPModelADMM(scores, numMentions, yLabelsSetGold, 0, zWeights.length);
+			//int zlabels[] =  buildAndSolveCplexILPModelADMM(scores, numMentions, yLabelsSetGold, 0, zWeights.length);
 			// TODO: check the ilp method once completely for the correct formulation
 						
 			// Print the latent mention labels (h) to file
