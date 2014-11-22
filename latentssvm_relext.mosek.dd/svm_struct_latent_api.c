@@ -592,7 +592,7 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	char *cmd = malloc(1000);
 	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
 			"java -Xmx8G -cp java/bin:java/lib/*  "
-			"-Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/ "
+			"-Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
 			"javaHelpers.InferLatentVarHelperAll ");
 	strcat(cmd,filename);
 	//strcat(command," dataset/reidel_trainSVM.data");
