@@ -193,9 +193,6 @@ public class InferLatentVarHelperAll {
 			  int nilIndex,
 			  int numOfLabels) throws IloException{
 				
-				YZPredicted predictedVals = new YZPredicted(numOfMentions);
-				Counter<Integer> yPredicted = predictedVals.getYPredicted();
-				
 				int [] zUpdate = new int[numOfMentions];
 				
 				IloCplex cplexILPModel = new IloCplex();
@@ -213,7 +210,7 @@ public class InferLatentVarHelperAll {
 				}
 				
 				for(int m = 0; m < numOfMentions; m++){
-					for(int l = 1; l < numOfLabels; l++){
+					for(int l = 0; l < numOfLabels; l++){
 						if(cplexILPModel.getValue(hiddenvars.get(m)[l]) == 1){
 							zUpdate[m] = l;
 						}
