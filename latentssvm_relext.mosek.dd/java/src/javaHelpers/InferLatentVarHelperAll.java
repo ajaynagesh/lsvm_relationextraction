@@ -1,5 +1,9 @@
 package javaHelpers;
 
+import ilog.concert.IloException;
+import ilog.concert.IloLinearNumExpr;
+import ilog.concert.IloNumVar;
+import ilog.cplex.IloCplex;
 import ilpInference.InferenceWrappers;
 import ilpInference.YZPredicted;
 
@@ -19,9 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.sf.javailp.Linear;
+import net.sf.javailp.OptType;
+
 import edu.stanford.nlp.stats.ClassicCounter;
 import edu.stanford.nlp.stats.Counter;
 import edu.stanford.nlp.util.Index;
+import edu.stanford.nlp.util.Pair;
 
 public class InferLatentVarHelperAll {
 	
@@ -164,9 +172,112 @@ public class InferLatentVarHelperAll {
 	}
 	
 	static int totNumberofRels = 0;
-
 	
-	public static void main(String args[]) throws IOException{
+	
+	static ArrayList<IloNumVar[]> createVariables(IloCplex cplexILPModel, int numOfMentions, int numOfLabels) throws IloException{
+		ArrayList<IloNumVar[]> hiddenvars  = new ArrayList<IloNumVar[]>();
+		
+		// Hidden variables array
+		for(int i = 0; i < numOfMentions; i ++){
+			IloNumVar[] h_mention = cplexILPModel.intVarArray(numOfLabels, 0, 1);
+			hiddenvars.add(h_mention);
+		}
+		
+		return hiddenvars;
+		
+	}
+
+	static int[] buildAndSolveCplexILPModelADMM( List<Counter<Integer>> scoresYGiven, 
+			  int numOfMentions, 
+			  Set<Integer> goldPos,
+			  int nilIndex,
+			  int numOfLabels) throws IloException{
+				
+				YZPredicted predictedVals = new YZPredicted(numOfMentions);
+				Counter<Integer> yPredicted = predictedVals.getYPredicted();
+				
+				int [] zUpdate = new int[numOfMentions];
+				
+				IloCplex cplexILPModel = new IloCplex();
+				//IloNumVarType varType   = IloNumVarType.Int; 
+				
+				// create variables
+				ArrayList<IloNumVar[]> hiddenvars =  createVariables(cplexILPModel, numOfMentions, numOfLabels);
+				// create the model
+				buildILPModelConditionalInference(cplexILPModel, hiddenvars, numOfMentions, scoresYGiven, goldPos, nilIndex);
+				
+				// solve the model
+				if ( cplexILPModel.solve() ) {
+					System.out.println("Solution status = " + cplexILPModel.getStatus());
+					System.out.println(" cost = " + cplexILPModel.getObjValue());
+				}
+				
+				for(int m = 0; m < numOfMentions; m++){
+					for(int l = 1; l < numOfLabels; l++){
+						if(cplexILPModel.getValue(hiddenvars.get(m)[l]) == 1){
+							zUpdate[m] = l;
+						}
+					}
+				}
+				
+				
+				return zUpdate;
+			}
+
+	static void buildILPModelConditionalInference(IloCplex cplexILPModel, ArrayList<IloNumVar[]> hiddenvars, int numOfMentions, 
+			List<Counter<Integer>> scores, Set<Integer> goldPos, int nilIndex) throws IloException{
+
+		IloLinearNumExpr objective = cplexILPModel.linearNumExpr();
+		
+		for(int m = 0; m < numOfMentions; m++){
+			Counter<Integer> score = scores.get(m);
+			for(int l : score.keySet()){
+				if(goldPos.size() > numOfMentions && l == nilIndex) // NIL index
+					continue;
+				
+				IloNumVar var = hiddenvars.get(m)[l];
+				double coeff = score.getCount(l);
+				objective.addTerm(coeff, var);
+			}
+		}
+		
+		cplexILPModel.addMaximize(objective);
+		
+		/////////// Constraints ------------------------------------------
+		/// 1. \Sum_{i \in Y'} z_ji = 1 \forall j
+		for(int m = 0; m < numOfMentions; m++){
+			IloLinearNumExpr cons_type1 = cplexILPModel.linearNumExpr();
+			for(int l : goldPos){ 
+				cons_type1.addTerm(1, hiddenvars.get(m)[l]);
+			}
+			cplexILPModel.addEq(cons_type1, 1);
+		}
+
+		/// ---> if (goldPos.size() > numOfMentions)     2. \Sum_j z_ji <= 1 \forall i 
+		///  --> else -->                                2.  1 <= \Sum_j z_ji \forall i \in Y'  {lhs=1, since we consider only Y' i.e goldPos}
+		if(goldPos.size() > numOfMentions){
+			
+			for(int l : goldPos){
+				IloLinearNumExpr cons_type2 = cplexILPModel.linearNumExpr();
+				for(int m = 0; m < numOfMentions; m ++){
+					cons_type2.addTerm(1, hiddenvars.get(m)[l]);
+				}	
+				cplexILPModel.addLe(cons_type2, 1);
+			}
+		}
+		else {
+			for(int l : goldPos){
+				IloLinearNumExpr cons_type2 = cplexILPModel.linearNumExpr();
+				for(int m = 0; m < numOfMentions; m ++){
+					cons_type2.addTerm(1, hiddenvars.get(m)[l]);
+				}
+				cplexILPModel.addGe(cons_type2, 1);
+			}
+		}
+			
+	}
+	
+	public static void main(String args[]) throws IOException, IloException{
 		String currentParametersFile = args[0];
 		String datasetFile = args[1];
 		long start = System.currentTimeMillis();
@@ -202,7 +313,9 @@ public class InferLatentVarHelperAll {
 				yLabelsSetGold.add(y);
 
 			InferenceWrappers ilp = new InferenceWrappers();
-			int zlabels[] =  ilp.generateZUpdateILP(scores, numMentions, yLabelsSetGold, 0);
+			//int zlabels[] =  ilp.generateZUpdateILP(scores, numMentions, yLabelsSetGold, 0);
+			// Calling the equivalent code in CPLEX
+			int zlabels[] =  buildAndSolveCplexILPModelADMM(scores, numMentions, yLabelsSetGold, 0, zWeights.length);
 			// TODO: check the ilp method once completely for the correct formulation
 						
 			// Print the latent mention labels (h) to file
