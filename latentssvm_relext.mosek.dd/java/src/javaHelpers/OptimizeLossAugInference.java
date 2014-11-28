@@ -43,7 +43,7 @@ public class OptimizeLossAugInference {
 	
 	public static ArrayList<YZPredicted> optimizeLossAugInferenceDD_ADMM(ArrayList<DataItem> dataset,
 			LabelWeights [] zWeights, double simFracParam, int maxFP, int maxFN, int Np, double rho, 
-			boolean isExhaustive, boolean isLPrelaxation) throws IOException, IloException, InterruptedException, ExecutionException{
+			boolean isExhaustive, boolean isLPrelaxation, double Fweight) throws IOException, IloException, InterruptedException, ExecutionException{
 
 		//TODO: check if zWeights.length also includes the nil label
 		
@@ -79,9 +79,9 @@ public class OptimizeLossAugInference {
 			//YtildeStar = LossLagrangian.optLossLag(dataset, zWeights.length-1, regions, Lambda);
 			Pair<ArrayList<YZPredicted>, Double> resultLoss;
 			if(!isExhaustive)
-				resultLoss = LossLagrangian.optLossLagAugmented(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho);
+				resultLoss = LossLagrangian.optLossLagAugmented(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho, Fweight);
 			else
-				resultLoss = LossLagrangian.optLossLagAugmentedExhaustive(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho);
+				resultLoss = LossLagrangian.optLossLagAugmentedExhaustive(dataset, zWeights.length-1, Lambda, maxFP, maxFN, Np, YtildeDashStar, rho, Fweight);
 			
 			YtildeStar = resultLoss.first();
 			double lossObj = resultLoss.second();

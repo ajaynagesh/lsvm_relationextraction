@@ -432,7 +432,7 @@ void write_to_file_params_t(double *w, long num_of_features, long total_number_r
 
 }
 
-void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation){
+void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Fweight){
 
 	// 1. Write input to a file
 	char *filename = (char*) malloc(100);
@@ -470,6 +470,9 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 	strcat(cmd, " ");
 	char isLPrelaxation_str[5]; sprintf(isLPrelaxation_str,"%ld", isLPrelaxation);
 	strcat(cmd, isLPrelaxation_str);
+	strcat(cmd, " ");
+	char Fweight_str[10]; sprintf(Fweight_str, "%g", Fweight);
+	strcat(cmd, Fweight_str);
 
 	printf("Executing cmd : %s\n", cmd);fflush(stdout);
 	system(cmd);

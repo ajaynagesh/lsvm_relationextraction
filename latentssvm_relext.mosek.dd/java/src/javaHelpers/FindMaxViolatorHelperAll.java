@@ -160,7 +160,8 @@ public class FindMaxViolatorHelperAll {
 			System.out.println("[combine hamming + F1] Log: Local search based dual decomposition");
 			boolean isExhaustive = Integer.parseInt(args[5]) == 1 ? true : false; 
 			boolean isLPrelaxation = Integer.parseInt(args[6]) == 1 ? true : false;
-			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD_ADMM(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np, rho, isExhaustive, isLPrelaxation);
+			double Fweight = Double.parseDouble(args[7]);
+			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD_ADMM(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np, rho, isExhaustive, isLPrelaxation, Fweight);
 		}
 		else {
 			System.out.println(" Log: Local search based dual decomposition");

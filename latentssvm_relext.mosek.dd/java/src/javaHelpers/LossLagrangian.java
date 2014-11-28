@@ -183,7 +183,7 @@ public class LossLagrangian {
 	}
 	
 	public static Pair<ArrayList<YZPredicted>,Double> optLossLagAugmented (ArrayList<DataItem> dataset, 
-			int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np, ArrayList<YZPredicted> YtildeDashStar, double rho){
+			int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np, ArrayList<YZPredicted> YtildeDashStar, double rho, double Fweight){
 		
 		//// IMPT NOTE: This is the 2nd type of LossLagrangian which does not need piece-wise linear approximation. 
 		//// It does a local search in the space of FPs and FNs and find the y' based on the \lambda's set from previous iterations
@@ -213,7 +213,7 @@ public class LossLagrangian {
 		IndexPtAugmented[] positiveIndices = indices.first();
 		IndexPtAugmented[] negativeIndices = indices.second();
 		
-		double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices);
+		double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices, Fweight);
 		double maxNeighbourLoss = Double.NEGATIVE_INFINITY;
 		Pair<Integer, Integer> bestNeighbour = null; 
 		System.out.println("[admm] Log: Starting point (Local Search) .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
@@ -225,7 +225,7 @@ public class LossLagrangian {
 				
 			maxNeighbourLoss = Double.NEGATIVE_INFINITY;
 			for(Pair<Integer, Integer> n_pt : neigbours){
-				double n_loss = calcLossAugmented(n_pt, Np, positiveIndices, negativeIndices);
+				double n_loss = calcLossAugmented(n_pt, Np, positiveIndices, negativeIndices, Fweight);
 				
 				if(n_loss > maxNeighbourLoss){
 					maxNeighbourLoss = n_loss;
@@ -293,7 +293,7 @@ public class LossLagrangian {
 	}
 	
 	public static Pair<ArrayList<YZPredicted>,Double> optLossLagAugmentedExhaustive (ArrayList<DataItem> dataset, 
-			int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np, ArrayList<YZPredicted> YtildeDashStar, double rho){
+			int numPosLabels, double[][] Lambda, int maxFP, int maxFN, int Np, ArrayList<YZPredicted> YtildeDashStar, double rho, double Fweight){
 		
 		//// IMPT NOTE: This is the 2nd type of LossLagrangian which does not need piece-wise linear approximation. 
 		//// For comparison use an exhaustive search in the space of FPs and FNs and find the y' based on the \lambda's set from previous iterations
@@ -321,7 +321,7 @@ public class LossLagrangian {
 
 				Pair<Integer, Integer> current_FP_FN = new Pair<Integer, Integer>(i, j);
 
-				double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices);
+				double currentLoss = calcLossAugmented(current_FP_FN, Np, positiveIndices, negativeIndices, Fweight);
 
 				if(currentLoss > maxLoss){
 					maxLoss = currentLoss;
@@ -558,7 +558,7 @@ public class LossLagrangian {
 	}
 	
 	static double  calcLossAugmented(Pair<Integer, Integer> FP_FN, int Np, 
-			IndexPtAugmented[] posIndices, IndexPtAugmented[] negIndices) {
+			IndexPtAugmented[] posIndices, IndexPtAugmented[] negIndices, double Fweight) {
 		double deltaF1 = 0.0;
 		double maxScoreTerms = 0.0;
 		
@@ -567,7 +567,9 @@ public class LossLagrangian {
 		int FP = FP_FN.first();
 		int FN = FP_FN.second();
 		
-		deltaF1 = (double)(FP+FN) / (double)(2*Np + FP - FN);
+		//deltaF1 = (double)(FP+FN) / (double)(2*Np + FP - FN);
+		// To incorporate weighting of P and R in Fscore calculation
+		deltaF1 = (double)( (Fweight * FP) + ((1 - Fweight)*FN) ) / (double)(Np + (Fweight * FP) - (Fweight * FN));
 		
 		for(int i = 0; i < FP; i ++){
 			maxScoreTerms += negIndices[i].score;
