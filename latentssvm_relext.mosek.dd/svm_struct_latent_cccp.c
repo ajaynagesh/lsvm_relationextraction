@@ -608,7 +608,7 @@ int main(int argc, char* argv[]) {
   outer_iter = 0;
   last_primal_obj = 0;
   decrement = 0;
-  cooling_eps = 0.5*C*epsilon; 
+  cooling_eps = 0.5*MAX(C,Cdash)*epsilon;
   while ((outer_iter<2)||((!stop_crit)&&(outer_iter<MAX_OUTER_ITER))) {
     printf("OUTER ITER %d\n", outer_iter); fflush(stdout);
     /* cutting plane algorithm */
@@ -630,10 +630,10 @@ int main(int argc, char* argv[]) {
     printf("primal objective: %.4f\n", primal_obj);
     printf("decrement: %.4f\n", decrement); fflush(stdout);
     
-    stop_crit = (decrement<C*epsilon)&&(cooling_eps<0.5*C*epsilon+1E-8);
+    stop_crit = (decrement<MAX(C, Cdash)*epsilon)&&(cooling_eps<0.5*MAX(C, Cdash)*epsilon+1E-8);
 
     cooling_eps = -decrement*0.01;
-    cooling_eps = MAX(cooling_eps, 0.5*C*epsilon);
+    cooling_eps = MAX(cooling_eps, 0.5*MAX(C,Cdash)*epsilon);
     printf("cooling_eps: %.8g\n", cooling_eps); 
 
   
