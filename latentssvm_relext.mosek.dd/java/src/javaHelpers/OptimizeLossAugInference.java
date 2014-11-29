@@ -178,7 +178,7 @@ public class OptimizeLossAugInference {
 					if(rho == 0.0)
 						Lambda[i][l] = Lambda[i][l] -  ( eta * (ystar_il - ydashstar_il));
 					else
-						Lambda[i][l] = Lambda[i][l] -  ( rho * (ystar_il - ydashstar_il));
+						Lambda[i][l] = Lambda[i][l] -  ( rho * eta * (ystar_il - ydashstar_il));
 				}
 			}
 			
