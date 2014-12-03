@@ -511,7 +511,8 @@ public class LossLagrangian {
 		ArrayList<Pair<Integer, Integer>> neigbours = new ArrayList<Pair<Integer, Integer>>();
 		
 		int [] offset = {-1, 0, +1};
-		int [] powers = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
+		//int [] powers = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
+		int [] powers = {1,  8,  64,  512,  4096, 16384, 65536};
 		
 		int FP = FP_FN.first();
 		int FN = FP_FN.second();
