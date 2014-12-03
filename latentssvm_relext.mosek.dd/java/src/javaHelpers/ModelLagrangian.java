@@ -89,6 +89,7 @@ public class ModelLagrangian {
 		
 		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
 
+		IloCplex cplexILPModel = new IloCplex();
 		for(int i = 0; i < dataset.size(); i++){
 
 			if(i % 10000 == 0){
@@ -109,7 +110,7 @@ public class ModelLagrangian {
 			for(int y : yLabelsGold)  
 				yLabelsSetGold.add(y);
 			
-			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM_LPrelaxation(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho, yLabelsSetGold);
+			Pair<YZPredicted, Double> result = buildAndSolveCplexILPModelADMM_LPrelaxation(scores, numMentions, 0, Lambda, zWeights.length, i, YtildeStar.get(i), rho, yLabelsSetGold, cplexILPModel);
 			YZPredicted yz = result.first();
 			modelObj += result.second();
 			
@@ -227,13 +228,15 @@ public class ModelLagrangian {
 			  int i, 
 			  YZPredicted YtildeStar_i, 
 			  double rho,
-			  Set<Integer> ylabelsGold) throws IloException{
+			  Set<Integer> ylabelsGold,
+			  IloCplex cplexILPModel) throws IloException{
 				
 				YZPredicted predictedVals = new YZPredicted(numOfMentions);
 				Counter<Integer> yPredicted = predictedVals.getYPredicted();
 				int [] zPredicted = predictedVals.getZPredicted();
 				
-				IloCplex cplexILPModel = new IloCplex();
+				//IloCplex cplexILPModel = new IloCplex(); // NOTE : to remove the memory leak of Cplex 
+				cplexILPModel.clearModel();
 				//IloNumVarType varType   = IloNumVarType.Int; 
 				
 				// create variables
