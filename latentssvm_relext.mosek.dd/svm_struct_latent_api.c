@@ -19,7 +19,7 @@
 #include "svm_struct_latent_api_types.h"
 
 void test_print(SAMPLE sample){
-	printf("%d\n",sample.n);
+	//printf("%d\n",sample.n);
 	int i;
 	for(i = 0; i < sample.n; i ++){
 		EXAMPLE e = (EXAMPLE)sample.examples[i];
@@ -46,6 +46,44 @@ void test_print(SAMPLE sample){
 		}
 	}
 }
+
+void test_print_dataset(EXAMPLE *sample, int sz){
+	//printf("%d\n",sample.n);
+	int i;
+	int dataptsz = 0;
+	for(i = 0; i < sz; i ++){
+		EXAMPLE *e =  sample+sizeof(EXAMPLE); //(sample+dataptsz);
+		int num_rels = e->y.num_relations;
+
+		printf("%d\n",num_rels);
+		int j;
+		for(j = 0; j < num_rels; j ++){
+			printf("%d\n",e->y.relations[j]);
+		}
+		int num_mentions = e->x.num_mentions;
+		printf("%d\n", num_mentions);
+		int k;
+		for(k = 0; k < num_mentions; k ++){
+
+			WORD *mention_features = (WORD*) e->x.mention_features[k].words;
+
+			int f_sz = atoi(e->x.mention_features[k].userdefined);
+
+			int l;
+			printf("%d\t",f_sz);
+			for(l = 0; l < f_sz; l ++){
+				printf("%d:%.1f ",mention_features[l].wnum, mention_features[l].weight);
+			}
+			dataptsz += sizeof(WORD)*(f_sz + 1) + 10;
+			printf("\n");
+		}
+
+		printf("Sample addr: %x\n",sample);
+		dataptsz += sizeof(EXAMPLE) + sizeof(int)*(e->y.num_relations) +
+				sizeof(SVECTOR)*num_mentions + sizeof(int)*num_mentions;
+	}
+}
+
 
 SAMPLE read_struct_examples(char *file, STRUCT_LEARN_PARM *sparm) {
 /*
