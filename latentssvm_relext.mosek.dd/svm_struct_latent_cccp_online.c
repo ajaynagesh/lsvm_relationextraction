@@ -764,7 +764,7 @@ int main(int argc, char* argv[]) {
 			/* prepare feature vector cache for correct labels with imputed latent variables */
 			fycache = (SVECTOR**)malloc(curr_datasample_sz*sizeof(SVECTOR*));
 			for (i = 0; i < curr_datasample_sz; i++) {
-				fy = psi(curr_datasample.examples->x, curr_datasample.examples->y, curr_datasample.examples->h, &sm, &sparm);
+				fy = psi(curr_datasample.examples[i]->x, curr_datasample.examples[i]->y, curr_datasample.examples[i]->h, &sm, &sparm);
 				diff = add_list_ss(fy);
 				free_svector(fy);
 				fy = diff;
