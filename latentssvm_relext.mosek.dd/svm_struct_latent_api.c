@@ -470,6 +470,32 @@ void write_to_file_params_t(double *w, long num_of_features, long total_number_r
 
 }
 
+void write_to_file_params_t_online(double *w, long num_of_features, long total_number_rels, char *filename){
+
+	FILE *fp = fopen(filename,"a");
+	if (fp==NULL) {
+		printf("Cannot open output file %s!\n", filename);
+		exit(1);
+	}
+
+	//Write the w. One line for each label.
+	fprintf(fp,"%ld\n",total_number_rels);
+	fprintf(fp,"%ld\n",num_of_features);
+	long rel_id;
+	for(rel_id = 0; rel_id <= total_number_rels; rel_id++){ // Include the nil label id
+		long f_id;
+		for(f_id = 1; f_id <= num_of_features; f_id ++){ // Feature ids start from 1 and go upto num_of_features .. hence this
+			long key = (rel_id * num_of_features) + f_id;
+			fprintf(fp, "%.16g ",w[key]);
+		}
+		fprintf(fp, "\n");
+	}
+
+	fclose(fp);
+
+
+}
+
 void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Fweight){
 
 	// 1. Write input to a file
@@ -865,6 +891,13 @@ void write_struct_model(char *file, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm) {
 	  fclose(modelfl);
  */
 	write_to_file_params_t(sm->w, sparm->max_feature_key, sparm->total_number_rels, file);
+}
+
+void write_struct_model_online(char *file, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm) {
+/*
+  Writes the learned weight vector sm->w_iters to file after training.
+*/
+	write_to_file_params_t_online(sm->w_iters, sparm->max_feature_key, sparm->total_number_rels, file);
 }
 
 STRUCTMODEL read_struct_model(char *file, STRUCT_LEARN_PARM *sparm) {

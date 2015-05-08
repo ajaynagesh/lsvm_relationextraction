@@ -918,6 +918,8 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
+	write_struct_model_online(modelfile, &sm, &sparm);
+
 	return(0);
 
 }
