@@ -88,7 +88,7 @@ double* add_list_nn(SVECTOR *a, long totwords)
 SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm,
 		STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim,
 		double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive,
-		long isLPrelaxation, double *margin2) {
+		long isLPrelaxation, double *margin2, double *wprev) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -106,7 +106,8 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   time_t mv_start, mv_end;
 
   time(&mv_start);
-  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight);
+  find_most_violated_constraint_marginrescaling_all_online(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile,
+		  frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight, wprev);
   time(&mv_end);
 
 #if (DEBUG_LEVEL==1)
@@ -179,11 +180,11 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
 }
 
-
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon,
 		SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir,
 		char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm,
 		long isExhaustive, long isLPrelaxation, double Cdash, double *wprev ) {
+
   long i,j;
   double xi;
   double *alpha;
@@ -228,6 +229,12 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   double z_k_norm;
   double last_z_k_norm=0;
 
+  /**
+  	 * Ajay: Create new variable u = w - w^(i-1)
+  	 */
+  for(i = 0; i < sm->sizePsi+1; i++){
+	  w[i] = w[i] - wprev[i];
+  }
 
   w_b = create_nvector(sm->sizePsi);
   clear_nvector(w_b,sm->sizePsi);
@@ -250,11 +257,16 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
   printf("ITER 0 \n(before cutting plane) \n");
   double margin2;
-  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
+  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev);
   value = margin2 - sprod_ns(w, new_constraint);
-	
-  primal_obj_b = 0.5*sprod_nn_online(w_b,w_b,wprev,wprev,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
-  primal_obj = 0.5*sprod_nn_online(w,w,wprev,wprev,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+
+  /**
+   * Ajay: Online Learning -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
+   */
+  margin = margin + sprod_ns(wprev, new_constraint);
+
+  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
+  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
   primal_lower_bound = 0;
   expected_descent = -primal_obj_b;
   initial_primal_obj = primal_obj_b; 
@@ -391,12 +403,17 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
       }
     }
 
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
+  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev);
  //   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
     value = margin2 - sprod_ns(w, new_constraint);
 
+    /**
+       * Ajay: Online Learning -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
+       */
+     margin = margin + sprod_ns(wprev, new_constraint);
+
     /* print primal objective */
-    primal_obj = 0.5*sprod_nn_online(w,w,wprev,wprev,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
      
 #if (DEBUG_LEVEL>0)
     printf("ITER PRIMAL_OBJ %.4f\n", primal_obj); fflush(stdout);
@@ -607,7 +624,11 @@ SAMPLE *create_chunk(EXAMPLE *dataset, int datasetStartIdx, int chunkSz){
 		return (sample);
 }
 
-SAMPLE * split_data(SAMPLE *sample, int numChunks){
+void randomize_dataset(SAMPLE *sample){
+
+}
+
+SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 
 //	printf("Entire Dataset : \n");
 //	test_print(*sample);
@@ -617,11 +638,14 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks){
 	int dataset_sz = sample->n;
 	EXAMPLE *dataset = sample->examples;
 
-	// randomize and create representative sample
+	// randomize the datapoints
+	if(randomize == 1){
+		randomize_dataset(sample);
+	}
 
 	int i;
 	int chunkSz = dataset_sz / numChunks;
-	SAMPLE *chunks = (SAMPLE*)malloc(sizeof(SAMPLE)*numChunks) ;
+	SAMPLE *chunks = (SAMPLE*) malloc(sizeof(SAMPLE)*numChunks) ;
 
 //	printf("Individual Chunks");
 //	printf("---------------------------------------------------------------------\n");
@@ -669,7 +693,8 @@ void warm_start(double *dst, double *src, int sz){
 
 int main(int argc, char* argv[]) {
 
-	printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. with weighting of Fscores .. ONLINE LEARNING SETTING ");
+	printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. "
+			"with weighting of Fscores .. ONLINE LEARNING SETTING ");
 
 	double *w; /* weight vector */
 	int outer_iter;
@@ -706,10 +731,13 @@ int main(int argc, char* argv[]) {
 
 	/* read in examples */
 	//strcpy(trainfile, "dataset/reidel_trainSVM.small.data");
-	sample = read_struct_examples(trainfile,&sparm);
+	sample = read_struct_examples(trainfile,&sparm); // TODO: Collect stats on the Distribution of class labels
 
 	ex = sample.examples;
 	m = sample.n;
+
+	int eid, totalEpochs = learn_parm.totalEpochs;
+	int chunkid, numChunks = learn_parm.numChunks;
 
 	////****** testing of the lossF1 function
 	//  LABEL *ybar_all = (LABEL*) malloc (4*sizeof(LABEL));
@@ -731,6 +759,7 @@ int main(int argc, char* argv[]) {
 	//  SVECTOR *fvec1 = psi(ex[2].x,ex[2].y,ex[2].h,&sm, &sparm);
 	//  exit(0);
 
+	// (OnlineSVM): w is as the final weight vector learned from all the epochs and chunks (avg. over each of these entries)
 	w = create_nvector(sm.sizePsi);
 	clear_nvector(w, sm.sizePsi);
 	sm.w = w; /* establish link to w, as long as w does not change pointer */
@@ -757,9 +786,6 @@ int main(int argc, char* argv[]) {
 	printf("sample.n: %ld\n", sample.n);
 	printf("sm.sizePsi: %ld\n", sm.sizePsi); fflush(stdout);
 
-	int eid, totalEpochs = 1; // TODO: need to make this a cmdline parameter
-	int chunkid, numChunks = 50; // TODO: need to make this a cmdline parameter
-
 	/**
 	 * If we have ‘k’ instances and do ‘n’ epochs, after processing each chunk we update the weight.
 	 * Since we do ‘k’ updates, we will have ‘k’ weight vectors after each epoch.
@@ -775,7 +801,8 @@ int main(int argc, char* argv[]) {
 	sm.w_iters = w_iters;
 
 	// Code to split the given dataset (X,Y) into k chunks
-	SAMPLE *ex_chunk = split_data(&sample, numChunks);
+	SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
+	//SAMPLE *dataset_chunks2 = split_data(&sample, numChunks, 1); // randomize the datapoint of the original dataset
 
 	//  int x;
 	//  for(x = 0; x < numChunks; x++){
@@ -796,7 +823,7 @@ int main(int argc, char* argv[]) {
 			/* impute latent variable for first iteration */
 			// Ajay: Already initialised in read_struct_examples
 			//init_latent_variables(&sample,&learn_parm,&sm,&sparm);
-			SAMPLE curr_datasample = ex_chunk[chunkid];
+			SAMPLE curr_datasample = dataset_chunks[chunkid];
 			int curr_datasample_sz = curr_datasample.n;
 
 			/* prepare feature vector cache for correct labels with imputed latent variables */
@@ -908,6 +935,8 @@ int main(int argc, char* argv[]) {
 			print_time(time_start, time_end, "Total time");
 #endif
 
+			if(chunkid+1 < numChunks) // Dont do this for the last chunk; This will go to the next epoch id
+				warm_start(w_iters[eid][chunkid+1], w_iters[eid][chunkid], sm.sizePsi);
 		}
 
 		// After the completion of one epoch, warm start the 2nd epoch with the values of the
@@ -918,7 +947,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	write_struct_model_online(modelfile, &sm, &sparm);
+	write_struct_model_online(modelfile, &sm, &sparm, totalEpochs, numChunks);
 
 	return(0);
 
@@ -945,6 +974,10 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
 
   struct_parm->custom_argc=0;
 
+  // Ajay
+  learn_parm->totalEpochs = 1;
+  learn_parm->numChunks = 50;
+
   for(i=1;(i<argc) && ((argv[i])[0] == '-');i++) {
     switch ((argv[i])[1]) {
     case 'c': i++; learn_parm->svm_c=atof(argv[i]); break;
@@ -966,6 +999,8 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'a': i++; learn_parm->isExhaustive=atol(argv[i]);printf("isExhaustive is %ld",learn_parm->isExhaustive); break;
     case 'b': i++; learn_parm->isLPrelaxation=atol(argv[i]);printf("isLPrelaxation is %ld",learn_parm->isLPrelaxation); break;
     case 'C': i++; learn_parm->Cdash=atof(argv[i]); break;
+    case 'K': i++; learn_parm->numChunks=atoi(argv[i]); break;
+    case 'E': i++; learn_parm->totalEpochs=atoi(argv[i]); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);
       exit(0);

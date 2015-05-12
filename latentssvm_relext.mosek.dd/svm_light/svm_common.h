@@ -196,6 +196,8 @@ typedef struct learn_parm {
   long isExhaustive;
   long isLPrelaxation;
   double Cdash;
+  int numChunks;
+  int totalEpochs;
 
 } LEARN_PARM;
 
