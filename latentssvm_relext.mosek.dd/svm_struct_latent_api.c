@@ -516,6 +516,7 @@ void write_to_file_params_t_online(double ***w_iters, int totalEpochs, int numCh
 	fprintf(fp,"%ld\n",num_of_features);
 	long rel_id;
 	int eid, chunkid;
+	fprintf(fp, "==\n");
 	for(eid = 0; eid < totalEpochs; eid++){
 		for(chunkid = 0; chunkid < numChunks; chunkid++){
 

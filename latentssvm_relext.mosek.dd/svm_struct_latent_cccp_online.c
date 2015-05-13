@@ -230,7 +230,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   double last_z_k_norm=0;
 
   /**
-  	 * Ajay: Create new variable u = w - w^(i-1)
+  	 * (Online Learning): Create new variable u = w - w^(i-1)
   	 */
   for(i = 0; i < sm->sizePsi+1; i++){
 	  w[i] = w[i] - wprev[i];
@@ -261,9 +261,9 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   value = margin2 - sprod_ns(w, new_constraint);
 
   /**
-   * Ajay: Online Learning -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
+   *  (Online Learning) -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
    */
-  margin = margin + sprod_ns(wprev, new_constraint);
+  margin = margin - sprod_ns(wprev, new_constraint);
 
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
   primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
@@ -408,9 +408,9 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     value = margin2 - sprod_ns(w, new_constraint);
 
     /**
-       * Ajay: Online Learning -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
+       * (Online Learning) -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
        */
-     margin = margin + sprod_ns(wprev, new_constraint);
+     margin = margin - sprod_ns(wprev, new_constraint);
 
     /* print primal objective */
     primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
@@ -818,8 +818,10 @@ int main(int argc, char* argv[]) {
 	 */
 	for(eid = 0; eid < totalEpochs; eid++)
 	{
+		printf("(ONLINE LEARNING) : EPOCH %d\n",eid);
 		for(chunkid = 0; chunkid < numChunks; chunkid++)
 		{
+			printf("(ONLINE LEARNING) : PROCESSING CHUNK (PSEUDO-DATAPOINT) %d of %d\n",chunkid, numChunks);
 			/* impute latent variable for first iteration */
 			// Ajay: Already initialised in read_struct_examples
 			//init_latent_variables(&sample,&learn_parm,&sm,&sparm);
@@ -850,16 +852,24 @@ int main(int argc, char* argv[]) {
 				/* cutting plane algorithm */
 				time_t cp_start, cp_end;
 				time(&cp_start);
-				if(chunkid == 0){ // First Chunk
-					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz, MAX_ITER, C, cooling_eps,
-							fycache, curr_datasample.examples,
+				if(chunkid == 0 && eid == 0){ // First Chunk of First Epoch
+					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz,
+							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
 							learn_parm.isLPrelaxation, Cdash, zeroes); // pass the zeroes vector
 				}
+				else if(chunkid == 0){ // First chunk of the new Epoch
+					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz,
+							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
+							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
+							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
+							learn_parm.isLPrelaxation, Cdash, w_iters[eid-1][numChunks-1]); // Last chunk of previous epoch
+
+				}
 				else {
-					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz, MAX_ITER, C, cooling_eps,
-							fycache, curr_datasample.examples,
+					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz,
+							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
 							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1]);
@@ -915,7 +925,7 @@ int main(int argc, char* argv[]) {
 			} // end outer loop of the CCCP algorithm
 
 			/***
-			 * Ajay: Should not write the model file here .. so commenting this piece of code.
+			 * (Online Learning): Should not write the model file here .. so commenting this piece of code.
 			 */
 			/* write structural model */
 			//write_struct_model(modelfile, &sm, &sparm); //TODO: Need to change this

@@ -127,12 +127,26 @@ public class FindMaxViolatorHelperAll {
 	
 	static int totNumberofRels = 0;
 	
-	static DatasetStats readDatasetStats(String filename) throws NumberFormatException, IOException{
+	static DatasetStats computeDatasetStats(String filename, ArrayList<DataItem> dataset) throws NumberFormatException, IOException{
+		int N=0, Np=0, L=0;
+
+//		if(!filename.equalsIgnoreCase("ignore")){
 		BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
-		int N = Integer.parseInt(br.readLine());
-		int Np = Integer.parseInt(br.readLine());
-		int L = Integer.parseInt(br.readLine());
+		N = Integer.parseInt(br.readLine());
+		Np = Integer.parseInt(br.readLine());
+		L = Integer.parseInt(br.readLine());
 		br.close();
+//		}
+		
+		N = Np = 0;
+		for(int i=0; i < dataset.size(); i++){
+			DataItem d = dataset.get(i);
+			if(d.ylabel.length > 0){
+				N++;
+				Np += d.ylabel.length;
+			}
+				
+		}
 		
 		DatasetStats stats = new DatasetStats(N, Np, L);
 		return stats;
@@ -148,7 +162,7 @@ public class FindMaxViolatorHelperAll {
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
 		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
 		
-		DatasetStats stats = readDatasetStats(datasetStatsFile);
+		DatasetStats stats = computeDatasetStats(datasetStatsFile, dataset);
 		System.out.println(stats);
 		
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(currentParametersFile+".result")));
