@@ -800,6 +800,8 @@ int main(int argc, char* argv[]) {
 	}
 	sm.w_iters = w_iters;
 
+	printf("(OnlineSVM) : Created the online variables\n");
+
 	// Code to split the given dataset (X,Y) into k chunks
 	SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
 	//SAMPLE *dataset_chunks2 = split_data(&sample, numChunks, 1); // randomize the datapoint of the original dataset

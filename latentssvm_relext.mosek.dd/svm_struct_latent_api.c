@@ -208,8 +208,8 @@ void init_struct_model(SAMPLE sample, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
 	printf("Max feature index %ld\n", sparm->max_feature_key);
 	printf("Size of w vector %ld\n",sm->sizePsi);
 
-	printf("Number of epochs (OnlineSVM Learning) : %d", lparm->totalEpochs);
-	printf("Number of chunks (OnlineSVM Learning) : %d", lparm->numChunks);
+	printf("Number of epochs (OnlineSVM Learning) : %d\n", lparm->totalEpochs);
+	printf("Number of chunks (OnlineSVM Learning) : %d\n", lparm->numChunks);
 
 }
 
