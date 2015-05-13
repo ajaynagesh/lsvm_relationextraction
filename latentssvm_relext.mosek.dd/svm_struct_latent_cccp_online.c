@@ -806,6 +806,8 @@ int main(int argc, char* argv[]) {
 	SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
 	//SAMPLE *dataset_chunks2 = split_data(&sample, numChunks, 1); // randomize the datapoint of the original dataset
 
+	printf("(OnlineSVM) : After the database split\n");
+
 	//  int x;
 	//  for(x = 0; x < numChunks; x++){
 	//	  //printf("AddAj-2 : %x\t%x\t%x\n",ex_chunk[x].y.relations, ex_chunk[x].x.mention_features, ex_chunk[x].h.mention_labels);
