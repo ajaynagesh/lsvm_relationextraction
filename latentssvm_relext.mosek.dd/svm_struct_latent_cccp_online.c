@@ -604,12 +604,12 @@ SAMPLE *create_chunk(EXAMPLE *dataset, long datasetStartIdx, long chunkSz){
 			int m;
 			for(m = 0; m < num_mentions; m++){
 				printf("Ajay -6- save\n");
+				printf("Ajay -6.5 %s\n", dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined);
 				//printf("(sz:%d)\t",f_sz);
 				char * f_sz_str = NULL;
 				printf(" Ajay -6 %x", f_sz_str);
 				f_sz_str = (char*)malloc(sizeof(char)*10);// --> eg. i, men m -- sz of the Fvector
 				printf("Ajay -6 %x", f_sz_str);
-				printf("Ajay -6.5 %s\n", dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined);
 				strncpy(f_sz_str, dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined, 10);
 				printf("Ajay -6.6 %s\n", f_sz_str);
 				int f_sz = atoi(f_sz_str);
