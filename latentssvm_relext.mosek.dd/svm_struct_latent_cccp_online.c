@@ -536,9 +536,9 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 }
 
 // chunkid should start from 1
-SAMPLE *create_chunk(EXAMPLE *dataset, long datasetStartIdx, long chunkSz){
+void create_chunk(EXAMPLE *dataset, long datasetStartIdx, SAMPLE *sample, long chunkSz){
 
-		SAMPLE *sample = (SAMPLE*)malloc(sizeof(SAMPLE));
+		//SAMPLE *sample = (SAMPLE*)malloc(sizeof(SAMPLE));
 
 		long eg_id;
 		int num_mentions, num_rels, total_num_rels;
@@ -547,18 +547,18 @@ SAMPLE *create_chunk(EXAMPLE *dataset, long datasetStartIdx, long chunkSz){
 		sample->n = chunkSz;
 		sample->examples = (EXAMPLE*)malloc(sizeof(EXAMPLE)*chunkSz);
 
-		printf("sample->examples %x\n", sample->examples);
+		//printf("sample->examples %x\n", sample->examples);
 
 		for(eg_id = 0; eg_id < chunkSz; eg_id ++){
-			printf("----\nEg : %ld\n", eg_id);
+			//printf("----\nEg : %ld\n", eg_id);
 
 			//init 'EXAMPLE'
 			EXAMPLE *e = &(sample->examples[eg_id]);
 
-			printf("%x\t%x\n",e,sample->examples);
+			//printf("%x\t%x\n",e,sample->examples);
 
 			num_rels = dataset[datasetStartIdx + eg_id].y.num_relations;
-			printf("Num_relations %d\n", num_rels);
+			//printf("Num_relations %d\n", num_rels);
 
 			//init 'LABEL' (e->y)
 			e->y.num_relations = num_rels;
@@ -567,27 +567,27 @@ SAMPLE *create_chunk(EXAMPLE *dataset, long datasetStartIdx, long chunkSz){
 				int yid;
 				e->y.relations = (int*)malloc((sizeof(int))*num_rels);
 
-				printf("e->y.relations = %x\n", e->y.relations);
+//				printf("e->y.relations = %x\n", e->y.relations);
 				for(yid = 0; yid < num_rels; yid++){
-					printf("Ajay -1\n");
+					//printf("Ajay -1\n");
 					e->y.relations[yid] = dataset[datasetStartIdx + eg_id].y.relations[yid]; // --> eg. i -- relation label
-					printf("Ajay -2 %d\n", dataset[datasetStartIdx + eg_id].y.relations[yid]);
+					//printf("Ajay -2 %d\n", dataset[datasetStartIdx + eg_id].y.relations[yid]);
 
-					printf("e->y.relations = %x\n", e->y.relations);
-					printf("e->y.relations = %d\n", *(e->y.relations));
-					printf("Ajay %d\n ",e->y.relations[yid]);
-					printf("e->y.relations = %d\n", *(e->y.relations));
+//					printf("e->y.relations = %x\n", e->y.relations);
+//					printf("e->y.relations = %d\n", *(e->y.relations));
+//					printf("Ajay %d\n ",e->y.relations[yid]);
+//					printf("e->y.relations = %d\n", *(e->y.relations));
 				}
 				//printf("\n");
 			}
 
 			num_mentions = dataset[datasetStartIdx + eg_id].x.num_mentions; // --> eg. i -- no. of mention labels
-			printf("Num_mentions %d\n", num_mentions);
+//			printf("Num_mentions %d\n", num_mentions);
 
 			// init 'PATTERN' (e->x)
 			e->x.num_mentions = num_mentions;
 			e->x.mention_features = (SVECTOR*)malloc(sizeof(SVECTOR)*num_mentions);
-			printf("Ajay -3\n");
+//			printf("Ajay -3 \t e->x.mention_features = %x\n", e->x.mention_features);
 			// init 'LATENT_VAR' (e->h)
 			e->h.num_mentions = num_mentions;
 			// Each of the mention labels should be initialized to nil label
@@ -595,29 +595,31 @@ SAMPLE *create_chunk(EXAMPLE *dataset, long datasetStartIdx, long chunkSz){
 			// Right now initialising to 0 (nillabel)
 			e->h.mention_labels = (int*) malloc(sizeof(int)*num_mentions);
 
-			printf("Ajay -4\n");
+//			printf("Ajay -4\n");
 			int i;
 			for(i = 0; i < num_mentions; i ++){
 				e->h.mention_labels[i] = 0;
 			}
-			printf("Ajay -5\n");
+//			printf("Ajay -5\nNum mentions : %d\n", num_mentions);
 			int m;
 			for(m = 0; m < num_mentions; m++){
-				printf("Ajay -6- save\n");
-				printf("Ajay -6.5 %s\n", dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined);
+//				printf("Ajay -6- save\n");
+//				printf("Ajay -6.5 sz %s\n", (dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined));
 				//printf("(sz:%d)\t",f_sz);
 				char * f_sz_str = NULL;
-				printf(" Ajay -6 %x", f_sz_str);
+//				printf(" Ajay -6 (null str) %x\n", f_sz_str);
 				f_sz_str = (char*)malloc(sizeof(char)*10);// --> eg. i, men m -- sz of the Fvector
-				printf("Ajay -6 %x", f_sz_str);
+//				printf("Ajay -6 (allocated str) %x\n", f_sz_str);
 				strncpy(f_sz_str, dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined, 10);
-				printf("Ajay -6.6 %s\n", f_sz_str);
+//				printf("Ajay -6.6 %x\n", f_sz_str);
 				int f_sz = atoi(f_sz_str);
-				printf("Ajay -6.62 %d\n", f_sz);
+//				printf("Ajay -6.62 %d\n", f_sz);
 				e->x.mention_features[m].userdefined =  f_sz_str;
-
-				printf("Ajay -7\n");
+//				printf("Ajay -6.63 %x\n", e->x.mention_features[m].userdefined);
+//				printf("Ajay -7\te->x.mention_features[m].userdefined = %s \t e->x.mention_features[0].words = %x\n", e->x.mention_features[m].userdefined, e->x.mention_features[0].userdefined);
 				e->x.mention_features[m].words = (WORD*)malloc(sizeof(WORD)*(f_sz + 1));
+
+//				printf("Ajay -8 \t e->x.mention_features[0].words \n", e->x.mention_features[0].words);
 
 				int i;
 				for(i = 0; i < f_sz; i ++){
@@ -631,18 +633,18 @@ SAMPLE *create_chunk(EXAMPLE *dataset, long datasetStartIdx, long chunkSz){
 
 				}
 
-				printf("Ajay -8\n");
+//				printf("Ajay -8\n");
 				// Add 0 to the last word ... might be necessary somewhere
 				e->x.mention_features[m].words[i].wnum = 0;
 				e->x.mention_features[m].words[i].weight = 0;
 
-				printf("Ajay -9\n");
+//				printf("Ajay -9\n");
 				//printf("\n");
 			}
 		}
 
 		//printf("AddAj : %x\t%x\t%x\n",sample->examples->y.relations, sample->examples->x.mention_features, sample->examples->h.mention_labels);
-		return (sample);
+		//return (sample);
 }
 
 void randomize_dataset(SAMPLE *sample){
@@ -668,8 +670,8 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	long chunkSz = dataset_sz / numChunks;
 	SAMPLE *chunks = (SAMPLE*) malloc(sizeof(SAMPLE)*numChunks) ;
 
-	printf("Individual Chunks");
-	printf("---------------------------------------------------------------------\n");
+//	printf("Individual Chunks");
+//	printf("---------------------------------------------------------------------\n");
 
 	long datasetStartIdx;
 	// create until the last but one chunk
@@ -677,8 +679,8 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	for(i = 1; i <= numChunks - 1; i++){
 		datasetStartIdx = (i-1)*chunkSz;
 		printf("(OnlineSVM): Creating %d chunk \n",i );
-		c = create_chunk(dataset, datasetStartIdx, chunkSz);
-		chunks[i-1] = *c;
+		create_chunk(dataset, datasetStartIdx, &(chunks[i-1]), chunkSz);
+		//chunks[i-1] = *c;
 
 		//printf("AddAj-1 : %x\t%x\t%x\n",chunk->examples->y.relations, chunk->examples->x.mention_features, chunk->examples->h.mention_labels);
 
@@ -690,8 +692,8 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	// create the last chunk
 	datasetStartIdx = (numChunks-1) * chunkSz; // Calculate the startoffset using the old chunk sz
 	chunkSz = dataset_sz - (numChunks-1) * chunkSz; // Calculate the chunk size of the last chunk
-	c = create_chunk(dataset, datasetStartIdx, chunkSz);
-	chunks[numChunks-1] = *c;
+	create_chunk(dataset, datasetStartIdx, &(chunks[numChunks-1]), chunkSz);
+	//chunks[numChunks-1] = *c;
 
 	//printf("AddAj-1 : %x\t%x\t%x\n",chunk->examples->y.relations, chunk->examples->x.mention_features, chunk->examples->h.mention_labels);
 
@@ -814,7 +816,10 @@ int main(int argc, char* argv[]) {
 	 * Since we do ‘k’ updates, we will have ‘k’ weight vectors after each epoch.
 	 * After ‘n’ epochs, we will have ‘k*n’ weight vectors.
 	 */
-	double ***w_iters = (double***) malloc(totalEpochs*numChunks*sizeof(double*));
+	double ***w_iters = (double**) malloc(totalEpochs*sizeof(double**));
+	for(eid = 0; eid < totalEpochs; eid++){
+		w_iters[i] = (double*) malloc(numChunks*sizeof(double*));
+	}
 	for(eid = 0; eid < totalEpochs; eid++){
 		for(chunkid = 0; chunkid < numChunks; chunkid++){
 			w_iters[eid][chunkid] = create_nvector(sm.sizePsi);
@@ -823,7 +828,7 @@ int main(int argc, char* argv[]) {
 	}
 	sm.w_iters = w_iters;
 
-	printf("(OnlineSVM) : Created the online variables\n");
+	printf("(OnlineSVM) : Created the online variables\nw_iters = %x\nvectorsz = %ld\n",w_iters,sm.sizePsi);
 
 	// Code to split the given dataset (X,Y) into k chunks
 	SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize

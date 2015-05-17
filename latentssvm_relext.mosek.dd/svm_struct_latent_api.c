@@ -676,7 +676,7 @@ void find_most_violated_constraint_marginrescaling_all_online(LABEL *ybar_all, L
 	char Fweight_str[10]; sprintf(Fweight_str, "%g", Fweight);
 	strcat(cmd, Fweight_str);
 
-	printf("Executing cmd : %s\n", cmd);fflush(stdout);
+	printf("Executing cmd (onlineSVM) : %s\n", cmd);fflush(stdout);
 	system(cmd);
 
 
