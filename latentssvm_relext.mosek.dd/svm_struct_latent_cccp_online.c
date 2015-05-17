@@ -811,15 +811,19 @@ int main(int argc, char* argv[]) {
 	printf("sample.n: %ld\n", sample.n);
 	printf("sm.sizePsi: %ld\n", sm.sizePsi); fflush(stdout);
 
+	printf("In here\n");
 	/**
 	 * If we have ‘k’ instances and do ‘n’ epochs, after processing each chunk we update the weight.
 	 * Since we do ‘k’ updates, we will have ‘k’ weight vectors after each epoch.
 	 * After ‘n’ epochs, we will have ‘k*n’ weight vectors.
 	 */
 	double ***w_iters = (double**) malloc(totalEpochs*sizeof(double**));
+	printf("--2: After 1st malloc -- %x\n", w_iters);
 	for(eid = 0; eid < totalEpochs; eid++){
-		w_iters[i] = (double*) malloc(numChunks*sizeof(double*));
+		printf("2.5..... allocated ... %x\n",w_iters[eid]);
+		w_iters[eid] = (double*) malloc(numChunks*sizeof(double*));
 	}
+	printf("--3: After 2nd malloc \n");
 	for(eid = 0; eid < totalEpochs; eid++){
 		for(chunkid = 0; chunkid < numChunks; chunkid++){
 			w_iters[eid][chunkid] = create_nvector(sm.sizePsi);
@@ -977,8 +981,12 @@ int main(int argc, char* argv[]) {
 			print_time(time_start, time_end, "Total time");
 #endif
 
-			if(chunkid+1 < numChunks) // Dont do this for the last chunk; This will go to the next epoch id
+			if(chunkid+1 < numChunks){ // Dont do this for the last chunk; This will go to the next epoch id
 				warm_start(w_iters[eid][chunkid+1], w_iters[eid][chunkid], sm.sizePsi);
+				printf("(ONLINE LEARNING) : WARM START DONE....");
+			}
+
+			printf("(ONLINE LEARNING) : FINISHED PROCESSING CHUNK (PSEUDO-DATAPOINT) %d of %d\n",chunkid, numChunks);
 		}
 
 		// After the completion of one epoch, warm start the 2nd epoch with the values of the
@@ -986,7 +994,10 @@ int main(int argc, char* argv[]) {
 		if(eid + 1 < totalEpochs){
 			 //init w_iters[eid+1][0] to w_iters[eid][numChunks-1]
 			 warm_start(w_iters[eid+1][0], w_iters[eid][numChunks-1], sm.sizePsi);
+			 printf("(ONLINE LEARNING) : WARM START ACROSS EPOCHS ..... DONE....");
 		}
+
+		printf("(ONLINE LEARNING) : EPOCH %d DONE! .....\n",eid);
 	}
 
 	write_struct_model_online(modelfile, &sm, &sparm, totalEpochs, numChunks);

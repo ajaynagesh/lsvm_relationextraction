@@ -558,10 +558,17 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 //			" tmpfiles/max_violator_all dataset/reidel_trainSVM.data 0.9 ";
 
 	char *cmd = malloc(1000);
-	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
+	// ON MONASH ....
+        strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && "
+           " java -Xmx8G -cp java/bin:java/lib/* "
+	   " -Djava.library.path=../../libs/x86-64_sles10_4.1/:../../libs/lp_solve "
+	   " javaHelpers.FindMaxViolatorHelperAll ");
+	
+	// LOCAL PATH
+	/*strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
 			" java -Xmx16G -cp java/bin:java/lib/* "
 			" -Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
-			" javaHelpers.FindMaxViolatorHelperAll ");
+			" javaHelpers.FindMaxViolatorHelperAll ");*/
 	strcat(cmd,filename);
 	strcat(cmd, " ");
 	strcat(cmd, trainfile);
@@ -651,10 +658,17 @@ void find_most_violated_constraint_marginrescaling_all_online(LABEL *ybar_all, L
 //			" tmpfiles/max_violator_all dataset/reidel_trainSVM.data 0.9 ";
 
 	char *cmd = malloc(1000);
-	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
+	// ON MONASH ....
+        strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && "
+           " java -Xmx8G -cp java/bin:java/lib/* "
+	   " -Djava.library.path=../../libs/x86-64_sles10_4.1/:../../libs/lp_solve "
+	   " javaHelpers.FindMaxViolatorHelperAll ");
+
+	// LOCAL PATH
+	/*strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
 			" java -Xmx16G -cp java/bin:java/lib/* "
 			" -Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
-			" javaHelpers.FindMaxViolatorHelperAll ");
+			" javaHelpers.FindMaxViolatorHelperAll ");*/
 	strcat(cmd,filename);
 	strcat(cmd, " ");
 	strcat(cmd, trainfile);
@@ -795,10 +809,14 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 //			" java -Xmx8G -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelperAll "
 //			" tmpfiles/inf_lat_var_all dataset/reidel_trainSVM.data ";
 	char *cmd = malloc(1000);
-	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
+
+	// ON MONASH ....
+	strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && java -Xmx8G -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelperAll ");
+	// LOCAL PATH
+	/*strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
 			"java -Xmx8G -cp java/bin:java/lib/*  "
 			"-Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
-			"javaHelpers.InferLatentVarHelperAll ");
+			"javaHelpers.InferLatentVarHelperAll ");*/
 	strcat(cmd,filename);
 	//strcat(command," dataset/reidel_trainSVM.data");
 	strcat(cmd, " ");
