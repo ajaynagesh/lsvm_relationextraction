@@ -641,7 +641,7 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 void find_most_violated_constraint_marginrescaling_all_online(LABEL *ybar_all, LATENT_VAR *hbar_all,
 		STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile,
 		double frac_sim, char *dataset_stats_file, double rho_admm,
-		long isExhaustive, long isLPrelaxation, double Fweight, double *wprev){
+		long isExhaustive, long isLPrelaxation, double Fweight, double *wprev, int datasetStartIdx){
 
 	// 1. Write input to a file
 	char *filename = (char*) malloc(100);
@@ -689,6 +689,12 @@ void find_most_violated_constraint_marginrescaling_all_online(LABEL *ybar_all, L
 	strcat(cmd, " ");
 	char Fweight_str[10]; sprintf(Fweight_str, "%g", Fweight);
 	strcat(cmd, Fweight_str);
+	strcat(cmd, " ");
+	char datasetStartIdxStr[5]; sprintf(datasetStartIdxStr,"%d", datasetStartIdx);
+	strcat(cmd, datasetStartIdxStr);
+	strcat(cmd, " ");
+	char chunkSzStr[5]; sprintf(chunkSzStr, "%d", numEgs);
+	strcat(cmd, chunkSzStr);
 
 	printf("Executing cmd (onlineSVM) : %s\n", cmd);fflush(stdout);
 	system(cmd);
@@ -793,7 +799,7 @@ void find_most_violated_constraint_marginrescaling(PATTERN x, LABEL y, LABEL *yb
 
 }
 
-void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char* tmpdir, char *trainfile){
+void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char* tmpdir, char *trainfile, int datasetStartIdx){
 
 	// 1. Write input to a file
 	//char *filename = "tmpfiles/inf_lat_var_all";
@@ -821,8 +827,15 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	//strcat(command," dataset/reidel_trainSVM.data");
 	strcat(cmd, " ");
 	strcat(cmd, trainfile);
-		//printf("Running : %s\n", command);
-	printf("Executing cmd : %s\n", cmd);fflush(stdout);
+	strcat(cmd, " ");
+	char datasetStartIdxStr[5]; sprintf(datasetStartIdxStr,"%d", datasetStartIdx);
+	strcat(cmd, datasetStartIdxStr);
+	strcat(cmd, " ");
+	char chunkSzStr[5]; sprintf(chunkSzStr, "%d", numEgs);
+	strcat(cmd, chunkSzStr);
+
+	//printf("Running : %s\n", command);
+	printf("Executing cmd (online SVM) : %s\n", cmd);fflush(stdout);
 	system(cmd);
 
 	// 3. Read the values of ybar_all and hbar_all from the file tmpfiles/max_violator_all.result

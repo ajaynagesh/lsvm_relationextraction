@@ -40,7 +40,7 @@ public class Utils {
 	
 	}
 
-	public static ArrayList<DataItem> populateDataset(String filename) throws IOException{
+	public static ArrayList<DataItem> populateDataset(String filename, int datasetStartIdx, int chunkSz) throws IOException{
 		ArrayList<DataItem> dataset = new ArrayList<DataItem>();
 		
 		BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
@@ -48,6 +48,10 @@ public class Utils {
 		int numEgs = Integer.parseInt(br.readLine()); // num of examples
 		
 		FindMaxViolatorHelperAll.totNumberofRels = Integer.parseInt(br.readLine()); // total number of relations
+		
+		boolean considerChunks = true;
+		if(datasetStartIdx == -1 && chunkSz == -1)
+			considerChunks = false;
 		
 		for(int i = 0; i < numEgs; i++){ // for each example
 			
@@ -72,7 +76,8 @@ public class Utils {
 				example.pattern.add(mentionVector);
 			}
 			
-			dataset.add(example);
+			if( (considerChunks == true) && (i >= datasetStartIdx) && (i < (datasetStartIdx + chunkSz) ) )
+				dataset.add(example);
 		}
 		
 		br.close();

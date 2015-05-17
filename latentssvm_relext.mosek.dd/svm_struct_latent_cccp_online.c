@@ -88,7 +88,7 @@ double* add_list_nn(SVECTOR *a, long totwords)
 SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm,
 		STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim,
 		double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive,
-		long isLPrelaxation, double *margin2, double *wprev) {
+		long isLPrelaxation, double *margin2, double *wprev, int datasetStartIdx) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -107,7 +107,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
   time(&mv_start);
   find_most_violated_constraint_marginrescaling_all_online(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile,
-		  frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight, wprev);
+		  frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight, wprev, datasetStartIdx);
   time(&mv_end);
 
 #if (DEBUG_LEVEL==1)
@@ -183,7 +183,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon,
 		SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir,
 		char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm,
-		long isExhaustive, long isLPrelaxation, double Cdash, double *wprev ) {
+		long isExhaustive, long isLPrelaxation, double Cdash, double *wprev, int datasetStartIdx ) {
 
   long i,j;
   double xi;
@@ -257,7 +257,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
   printf("ITER 0 \n(before cutting plane) \n");
   double margin2;
-  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev);
+  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile,
+		  frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev, datasetStartIdx);
   value = margin2 - sprod_ns(w, new_constraint);
 
   /**
@@ -403,7 +404,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
       }
     }
 
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev);
+  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim,
+		  Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev, datasetStartIdx);
  //   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
     value = margin2 - sprod_ns(w, new_constraint);
 
@@ -887,20 +889,22 @@ int main(int argc, char* argv[]) {
 				printf("OUTER ITER %d\n", outer_iter); fflush(stdout);
 				/* cutting plane algorithm */
 				time_t cp_start, cp_end;
+				int datasetStartIdx = chunkid * sample.n / numChunks ; // Note: Not using 'curr_datasample_sz' as it is wrong for the last chunk
 				time(&cp_start);
 				if(chunkid == 0 && eid == 0){ // First Chunk of First Epoch
 					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz,
 							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
-							learn_parm.isLPrelaxation, Cdash, zeroes); // pass the zeroes vector
+							learn_parm.isLPrelaxation, Cdash, zeroes, datasetStartIdx); // pass the zeroes vector
 				}
 				else if(chunkid == 0){ // First chunk of the new Epoch
 					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz,
 							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
-							learn_parm.isLPrelaxation, Cdash, w_iters[eid-1][numChunks-1]); // Last chunk of previous epoch
+							learn_parm.isLPrelaxation, Cdash, w_iters[eid-1][numChunks-1],
+							datasetStartIdx); // Last chunk of previous epoch
 
 				}
 				else {
@@ -908,7 +912,8 @@ int main(int argc, char* argv[]) {
 							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
-							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1]);
+							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1],
+							datasetStartIdx);
 					// TODO: How to handle dataset_stats file and trainfile -- here ???
 				}
 				time(&cp_end);
@@ -939,7 +944,7 @@ int main(int argc, char* argv[]) {
 					free(imputed_h);
 
 				imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * curr_datasample_sz);
-				infer_latent_variables_all(imputed_h, &sm, &sparm, curr_datasample_sz, learn_parm.tmpdir, trainfile);
+				infer_latent_variables_all(imputed_h, &sm, &sparm, curr_datasample_sz, learn_parm.tmpdir, trainfile, datasetStartIdx);
 				//TODO: How to handle trainfile ...
 
 				for (i = 0; i < curr_datasample_sz; i++) {
@@ -994,7 +999,7 @@ int main(int argc, char* argv[]) {
 		if(eid + 1 < totalEpochs){
 			 //init w_iters[eid+1][0] to w_iters[eid][numChunks-1]
 			 warm_start(w_iters[eid+1][0], w_iters[eid][numChunks-1], sm.sizePsi);
-			 printf("(ONLINE LEARNING) : WARM START ACROSS EPOCHS ..... DONE....");
+			 printf("(ONLINE LEARNING) : WARM START ACROSS EPOCHS ..... DONE....\n");
 		}
 
 		printf("(ONLINE LEARNING) : EPOCH %d DONE! .....\n",eid);

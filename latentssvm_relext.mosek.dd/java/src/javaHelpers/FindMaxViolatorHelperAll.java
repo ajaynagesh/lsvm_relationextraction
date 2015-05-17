@@ -153,14 +153,16 @@ public class FindMaxViolatorHelperAll {
 	}
 	
 	public static void main(String args[]) throws IOException, IloException, InterruptedException, ExecutionException {
-		System.out.println("Test git");
+		System.out.println("Test git - onlineSVM additions included");
 		String currentParametersFile = args[0];
 		String datasetFile = args[1];
 		double simFracParam = Double.parseDouble(args[2]);
 		String datasetStatsFile = args[3];
 		double rho;
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
-		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
+		int datasetStartIdx = Integer.parseInt(args[8]);
+		int chunkSz = Integer.parseInt(args[9]);
+		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile, datasetStartIdx, chunkSz);
 		
 		DatasetStats stats = computeDatasetStats(datasetStatsFile, dataset);
 		System.out.println(stats);

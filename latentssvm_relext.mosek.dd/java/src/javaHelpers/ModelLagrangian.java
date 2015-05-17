@@ -458,7 +458,7 @@ public class ModelLagrangian {
 		String currentParametersFile = args[0]; // tmpfiles/max_violator_all;
 		String datasetFile = args[1]; // dataset/reidel_trainSVM.small.data;
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
-		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
+		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile, -1, -1);
 		
 		double Lambda[][] = new double[dataset.size()][52];
 

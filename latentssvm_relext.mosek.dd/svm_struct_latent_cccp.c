@@ -644,7 +644,7 @@ int main(int argc, char* argv[]) {
     	free(imputed_h);
 
     imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * m);
-    infer_latent_variables_all(imputed_h, &sm, &sparm, m, learn_parm.tmpdir, trainfile);
+    infer_latent_variables_all(imputed_h, &sm, &sparm, m, learn_parm.tmpdir, trainfile, -1);
 
     for (i=0;i<m;i++) {
 //      free_latent_var(ex[i].h);
