@@ -88,7 +88,8 @@ double* add_list_nn(SVECTOR *a, long totwords)
 SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm,
 		STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim,
 		double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive,
-		long isLPrelaxation, double *margin2, double *wprev, int datasetStartIdx) {
+		long isLPrelaxation, double *margin2, double *wprev, int datasetStartIdx,
+		int eid, int chunkid) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -107,7 +108,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
   time(&mv_start);
   find_most_violated_constraint_marginrescaling_all_online(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile,
-		  frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight, wprev, datasetStartIdx);
+		  frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight, wprev, datasetStartIdx, eid, chunkid);
   time(&mv_end);
 
 #if (DEBUG_LEVEL==1)
@@ -183,7 +184,8 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon,
 		SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir,
 		char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm,
-		long isExhaustive, long isLPrelaxation, double Cdash, double *wprev, int datasetStartIdx ) {
+		long isExhaustive, long isLPrelaxation, double Cdash, double *wprev, int datasetStartIdx,
+		int eid, int chunkid) {
 
   long i,j;
   double xi;
@@ -258,7 +260,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   printf("ITER 0 \n(before cutting plane) \n");
   double margin2;
   new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile,
-		  frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev, datasetStartIdx);
+		  frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev,
+		  datasetStartIdx, eid, chunkid);
   value = margin2 - sprod_ns(w, new_constraint);
 
   /**
@@ -405,7 +408,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     }
 
   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim,
-		  Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev, datasetStartIdx);
+		  Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, wprev,
+		  datasetStartIdx, eid, chunkid);
  //   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
     value = margin2 - sprod_ns(w, new_constraint);
 
@@ -711,7 +715,7 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	return chunks;
 }
 
-void warm_start(double *dst, double *src, int sz){
+void copy_vector(double *dst, double *src, int sz){
 
 	int i;
 	for(i = 0; i <= sz; i++){ // +1 is added to sz as in feature vectors previously defined.
@@ -724,7 +728,7 @@ int main(int argc, char* argv[]) {
 	printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. "
 			"with weighting of Fscores .. ONLINE LEARNING SETTING ");
 
-	double *w; /* weight vector */
+	//double *w; /* weight vector */
 	int outer_iter;
 	long m, i;
 	double C, epsilon, Cdash;
@@ -787,10 +791,10 @@ int main(int argc, char* argv[]) {
 	//  SVECTOR *fvec1 = psi(ex[2].x,ex[2].y,ex[2].h,&sm, &sparm);
 	//  exit(0);
 
-	// (OnlineSVM): w is as the final weight vector learned from all the epochs and chunks (avg. over each of these entries)
-	w = create_nvector(sm.sizePsi);
-	clear_nvector(w, sm.sizePsi);
-	sm.w = w; /* establish link to w, as long as w does not change pointer */
+	// (OnlineSVM : Commenting 'w' as they are replaced by 'w_iters'
+//	w = create_nvector(sm.sizePsi);
+//	clear_nvector(w, sm.sizePsi);
+//	sm.w = w; /* establish link to w, as long as w does not change pointer */
 
 	double *zeroes = create_nvector(sm.sizePsi);
 	clear_nvector(zeroes, sm.sizePsi);
@@ -897,7 +901,7 @@ int main(int argc, char* argv[]) {
 							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
-							learn_parm.isLPrelaxation, Cdash, zeroes, datasetStartIdx); // pass the zeroes vector
+							learn_parm.isLPrelaxation, Cdash, zeroes, datasetStartIdx, eid, chunkid); // pass the zeroes vector
 				}
 				else if(chunkid == 0){ // First chunk of the new Epoch
 					primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], curr_datasample_sz,
@@ -905,7 +909,7 @@ int main(int argc, char* argv[]) {
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
 							learn_parm.isLPrelaxation, Cdash, w_iters[eid-1][numChunks-1],
-							datasetStartIdx); // Last chunk of previous epoch
+							datasetStartIdx, eid, chunkid); // Last chunk of previous epoch
 
 				}
 				else {
@@ -914,7 +918,7 @@ int main(int argc, char* argv[]) {
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
 							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1],
-							datasetStartIdx);
+							datasetStartIdx, eid, chunkid);
 					// TODO: How to handle dataset_stats file and trainfile -- here ???
 				}
 				time(&cp_end);
@@ -974,8 +978,9 @@ int main(int argc, char* argv[]) {
 			// skip testing for the moment
 
 			/* free memory */
-			free_struct_sample(sample);
-			free_struct_model(sm, &sparm);
+			// Online SVM : no need to free this memory chunk ... else there will be double freeing
+//			free_struct_sample(sample);
+//			free_struct_model(sm, &sparm);
 			for(i = 0; i < curr_datasample_sz; i++) {
 				free_svector(fycache[i]);
 			}
@@ -988,7 +993,7 @@ int main(int argc, char* argv[]) {
 #endif
 
 			if(chunkid+1 < numChunks){ // Dont do this for the last chunk; This will go to the next epoch id
-				warm_start(w_iters[eid][chunkid+1], w_iters[eid][chunkid], sm.sizePsi);
+				copy_vector(w_iters[eid][chunkid+1], w_iters[eid][chunkid], sm.sizePsi);
 				printf("(ONLINE LEARNING) : WARM START DONE....");
 			}
 
@@ -999,7 +1004,7 @@ int main(int argc, char* argv[]) {
 		// weight vectors seen at the end of the last chunk in previous epoch
 		if(eid + 1 < totalEpochs){
 			 //init w_iters[eid+1][0] to w_iters[eid][numChunks-1]
-			 warm_start(w_iters[eid+1][0], w_iters[eid][numChunks-1], sm.sizePsi);
+			 copy_vector(w_iters[eid+1][0], w_iters[eid][numChunks-1], sm.sizePsi);
 			 printf("(ONLINE LEARNING) : WARM START ACROSS EPOCHS ..... DONE....\n");
 		}
 
