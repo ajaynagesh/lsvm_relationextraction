@@ -799,7 +799,8 @@ void find_most_violated_constraint_marginrescaling(PATTERN x, LABEL y, LABEL *yb
 
 }
 
-void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char* tmpdir, char *trainfile, int datasetStartIdx){
+void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
+		int numEgs, char* tmpdir, char *trainfile, int datasetStartIdx){
 
 	// 1. Write input to a file
 	//char *filename = "tmpfiles/inf_lat_var_all";
