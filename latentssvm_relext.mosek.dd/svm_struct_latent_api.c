@@ -812,7 +812,9 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	strcpy(filename, tmpdir);
 	strcat(filename,"inf_lat_var_all");
 
+	printf("(onlinesvm) Before writing params to file "); fflush(stdout);
 	write_to_file_params_t(sm->w_iters[eid][chunkid], sparm->max_feature_key, sparm->total_number_rels, filename);
+	printf("(onlinesvm) After writing params to file "); fflush(stdout);
 
 	// 2. Call the InferLatentVarHelperAll method from JAVA
 	// TODO: Modifiy the cmds appropriately
@@ -822,7 +824,8 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	char *cmd = malloc(1000);
 
 	// ON MONASH ....
-	strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && java -Xmx8G -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelperAll ");
+	strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ "
+			"&& java -Xmx8G -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelperAll ");
 	// LOCAL PATH
 	/*strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
 			"java -Xmx8G -cp java/bin:java/lib/*  "
