@@ -939,17 +939,21 @@ int main(int argc, char* argv[]) {
 
 				cooling_eps = -decrement*0.01;
 				cooling_eps = MAX(cooling_eps, 0.5*MAX(C,Cdash)*epsilon);
-				printf("cooling_eps: %.8g\n", cooling_eps);
+				printf("cooling_eps: %.8g\n", cooling_eps); fflush(stdout);
 
 
+				printf("(onlinesvm) Freeing latent variable allocs\n"); fflush(stdout);
 				/* impute latent variable using updated weight vector */
 				for(i = 0; i < curr_datasample_sz; i ++)
 					free_latent_var(curr_datasample.examples[i].h);
 				if(imputed_h != NULL)
 					free(imputed_h);
+				printf("(onlinesvm) Freeing latent variable allocs .. DONE\n"); fflush(stdout);
 
 				imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * curr_datasample_sz);
+				printf("(onlinesvm) Created memory for new latent variable imputation .. DONE ... %d\n", (sizeof(LATENT_VAR) * curr_datasample_sz)); fflush(stdout);
 				infer_latent_variables_all(imputed_h, &sm, &sparm, curr_datasample_sz, learn_parm.tmpdir, trainfile, datasetStartIdx);
+				printf("(onlinesvm) latent variable imputation .. DONE\n");
 				//TODO: How to handle trainfile ...
 
 				for (i = 0; i < curr_datasample_sz; i++) {
