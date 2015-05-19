@@ -20,6 +20,8 @@ void free_struct_model(STRUCTMODEL sm, STRUCT_LEARN_PARM *sparm);
 void free_pattern(PATTERN x);
 void free_label(LABEL y);
 void free_latent_var(LATENT_VAR h);
+void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
+		int numEgs, char* tmpdir, char *trainfile, int datasetStartIdx, int eid, int chunkid);
 void free_struct_sample(SAMPLE s);
 void parse_struct_parameters(STRUCT_LEARN_PARM *sparm);
 void print_motif(STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm);

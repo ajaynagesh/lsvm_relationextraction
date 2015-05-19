@@ -952,7 +952,7 @@ int main(int argc, char* argv[]) {
 
 				imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * curr_datasample_sz);
 				printf("(onlinesvm) Created memory for new latent variable imputation .. DONE ... %d\n", (sizeof(LATENT_VAR) * curr_datasample_sz)); fflush(stdout);
-				infer_latent_variables_all(imputed_h, &sm, &sparm, curr_datasample_sz, learn_parm.tmpdir, trainfile, datasetStartIdx);
+				infer_latent_variables_all(imputed_h, &sm, &sparm, curr_datasample_sz, learn_parm.tmpdir, trainfile, datasetStartIdx, eid, chunkid);
 				//TODO: How to handle trainfile ...
 
 				for (i = 0; i < curr_datasample_sz; i++) {
