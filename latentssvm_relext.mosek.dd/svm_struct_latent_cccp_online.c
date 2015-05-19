@@ -953,7 +953,6 @@ int main(int argc, char* argv[]) {
 				imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * curr_datasample_sz);
 				printf("(onlinesvm) Created memory for new latent variable imputation .. DONE ... %d\n", (sizeof(LATENT_VAR) * curr_datasample_sz)); fflush(stdout);
 				infer_latent_variables_all(imputed_h, &sm, &sparm, curr_datasample_sz, learn_parm.tmpdir, trainfile, datasetStartIdx);
-				printf("(onlinesvm) latent variable imputation .. DONE\n");
 				//TODO: How to handle trainfile ...
 
 				for (i = 0; i < curr_datasample_sz; i++) {
@@ -961,6 +960,8 @@ int main(int argc, char* argv[]) {
 					//      ex[i].h = infer_latent_variables(ex[i].x, ex[i].y, &sm, &sparm); // ILP for  Pr (Z | Y_i, X_i) in our case
 					curr_datasample.examples[i].h = imputed_h[i];
 				}
+				printf("(onlinesvm) latent variable imputation .. DONE\n"); fflush(stdout);
+
 				/* re-compute feature vector cache */
 				for (i = 0 ;i < curr_datasample_sz; i++) {
 					free_svector(fycache[i]);
@@ -970,6 +971,7 @@ int main(int argc, char* argv[]) {
 					fy = diff;
 					fycache[i] = fy;
 				}
+				printf("(onlinesvm) finished recomputing the vector cache .. DONE\n"); fflush(stdout);
 
 				outer_iter++;
 			} // end outer loop of the CCCP algorithm
@@ -985,10 +987,13 @@ int main(int argc, char* argv[]) {
 			// Online SVM : no need to free this memory chunk ... else there will be double freeing
 //			free_struct_sample(sample);
 //			free_struct_model(sm, &sparm);
+			printf("(onlinesvm) Starting to free the vector cache\n"); fflush(stdout);
 			for(i = 0; i < curr_datasample_sz; i++) {
 				free_svector(fycache[i]);
 			}
 			free(fycache);
+
+			printf("(onlinesvm) finished freeing the vector cache .. DONE\n"); fflush(stdout);
 
 			time(&time_end);
 
