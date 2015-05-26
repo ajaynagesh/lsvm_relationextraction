@@ -15,7 +15,8 @@
 #define STOP_PREC 1E-2
 #define UPDATE_BOUND 3
 
-#define MAX_OUTER_ITER 400
+//#define MAX_OUTER_ITER 400
+#define MAX_OUTER_ITER 15
 
 #define MAX(x,y) ((x) < (y) ? (y) : (x))
 #define MIN(x,y) ((x) > (y) ? (y) : (x))
