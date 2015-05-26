@@ -746,7 +746,7 @@ int main(int argc, char* argv[]) {
 	STRUCTMODEL sm;
 
 	double decrement;
-	double primal_obj, last_primal_obj;
+	double primal_obj, last_primal_obj, primal_obj_sum = 0.0;
 	double cooling_eps;
 	double stop_crit;
 
@@ -863,6 +863,7 @@ int main(int argc, char* argv[]) {
 	for(eid = 0; eid < totalEpochs; eid++)
 	{
 		printf("(ONLINE LEARNING) : EPOCH %d\n",eid);
+		primal_obj_sum = 0.0;
 		for(chunkid = 0; chunkid < numChunks; chunkid++)
 		{
 			printf("(ONLINE LEARNING) : PROCESSING CHUNK (PSEUDO-DATAPOINT) %d of %d\n",chunkid, numChunks);
@@ -1008,7 +1009,11 @@ int main(int argc, char* argv[]) {
 			}
 
 			printf("(ONLINE LEARNING) : FINISHED PROCESSING CHUNK (PSEUDO-DATAPOINT) %d of %d\n",chunkid, numChunks);
+			primal_obj_sum += primal_obj;
+			printf("(OnlineSVM) : Processed pseudo-datapoint -- primal objective sum: %.4f\n", primal_obj_sum);
 		}
+
+		printf("(OnlineSVM) : EPOCH COMPLETE -- primal objective: %.4f\n", primal_obj);
 
 		// After the completion of one epoch, warm start the 2nd epoch with the values of the
 		// weight vectors seen at the end of the last chunk in previous epoch
