@@ -268,7 +268,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   /**
    *  (Online Learning) -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
    */
-  margin = margin - sprod_ns(wprev, new_constraint);
+  // This may not be necessary as we are using change of variables .. so commenting it.
+  //margin = margin - sprod_ns(wprev, new_constraint);
 
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
   primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
@@ -417,7 +418,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     /**
        * (Online Learning) -- add the constant term (w^(i-1) \cdot \Psi(X,Y') - w^(i-1) \cdot \Psi(X,Y) ) to margin
        */
-     margin = margin - sprod_ns(wprev, new_constraint);
+    // This may not be necessary as we are using change of variables .. so commenting it.
+     //margin = margin - sprod_ns(wprev, new_constraint);
 
     /* print primal objective */
     primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
@@ -920,7 +922,7 @@ int main(int argc, char* argv[]) {
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
 							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1],
-							datasetStartIdx, eid, chunkid);
+							datasetStartIdx, eid, chunkid); // previous chunk id of current epoch
 					// TODO: How to handle dataset_stats file and trainfile -- here ???
 				}
 				time(&cp_end);
