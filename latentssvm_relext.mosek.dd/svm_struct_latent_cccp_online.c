@@ -1005,10 +1005,11 @@ int main(int argc, char* argv[]) {
 			print_time(time_start, time_end, "Total time");
 #endif
 
-			if(chunkid+1 < numChunks){ // Dont do this for the last chunk; This will go to the next epoch id
-				copy_vector(w_iters[eid][chunkid+1], w_iters[eid][chunkid], sm.sizePsi);
-				printf("(ONLINE LEARNING) : WARM START DONE....");
-			}
+			// NOTE: THIS IS NOT NECESSARY!!!! .... Commenting it
+//			if(chunkid+1 < numChunks){ // Dont do this for the last chunk; This will go to the next epoch id
+//				copy_vector(w_iters[eid][chunkid+1], w_iters[eid][chunkid], sm.sizePsi);
+//				printf("(ONLINE LEARNING) : WARM START DONE....");
+//			}
 
 			printf("(ONLINE LEARNING) : FINISHED PROCESSING CHUNK (PSEUDO-DATAPOINT) %d of %d\n",chunkid, numChunks);
 			primal_obj_sum += primal_obj;
