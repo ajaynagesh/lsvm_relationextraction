@@ -635,7 +635,8 @@ double *create_nvector(int n)
   double *vector;
   
   vector=(double *)my_malloc(sizeof(double)*(n+1));
-
+  // added by ajay
+printf("allocated memory of size : %d starting at %x\n",sizeof(double)*(n+1), vector);
   return(vector);
 }
 
