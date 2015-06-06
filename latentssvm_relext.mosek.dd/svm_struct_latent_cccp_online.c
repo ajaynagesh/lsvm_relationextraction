@@ -844,6 +844,8 @@ int main(int argc, char* argv[]) {
 
 	printf("(OnlineSVM) : Created the online variables\nw_iters = %x\nvectorsz = %ld\n",w_iters,sm.sizePsi);
 
+	exit(0);
+
 	// Code to split the given dataset (X,Y) into k chunks
 	SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
 	//SAMPLE *dataset_chunks2 = split_data(&sample, numChunks, 1); // randomize the datapoint of the original dataset
@@ -912,8 +914,8 @@ int main(int argc, char* argv[]) {
 							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
-							learn_parm.isLPrelaxation, Cdash, w_iters[eid-1][numChunks-1],
-							datasetStartIdx, eid, chunkid); // Last chunk of previous epoch
+							learn_parm.isLPrelaxation, Cdash, w_iters[eid-1][numChunks-1], // Last chunk of previous epoch
+							datasetStartIdx, eid, chunkid);
 
 				}
 				else {
@@ -921,8 +923,8 @@ int main(int argc, char* argv[]) {
 							MAX_ITER, C, cooling_eps, fycache, curr_datasample.examples,
 							&sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight,
 							learn_parm.dataset_stats_file, learn_parm.rho_admm, learn_parm.isExhaustive,
-							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1],
-							datasetStartIdx, eid, chunkid); // previous chunk id of current epoch
+							learn_parm.isLPrelaxation, Cdash, w_iters[eid][chunkid-1], // previous chunk id of current epoch
+							datasetStartIdx, eid, chunkid);
 					// TODO: How to handle dataset_stats file and trainfile -- here ???
 				}
 				time(&cp_end);
