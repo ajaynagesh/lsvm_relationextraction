@@ -821,7 +821,7 @@ int main(int argc, char* argv[]) {
 	printf("sample.n: %ld\n", sample.n);
 	printf("sm.sizePsi: %ld\n", sm.sizePsi); fflush(stdout);
 
-	printf("In here\n");
+	printf("In here; sz(double *) = %d\n",sizeof(double**));
 	/**
 	 * If we have ‘k’ instances and do ‘n’ epochs, after processing each chunk we update the weight.
 	 * Since we do ‘k’ updates, we will have ‘k’ weight vectors after each epoch.
