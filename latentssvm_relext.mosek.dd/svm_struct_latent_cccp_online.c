@@ -837,6 +837,7 @@ int main(int argc, char* argv[]) {
 	for(eid = 0; eid < totalEpochs; eid++){
 		for(chunkid = 0; chunkid < numChunks; chunkid++){
 			w_iters[eid][chunkid] = create_nvector(sm.sizePsi);
+			printf("Confirming memory location : %x\n",w_iters[eid][chunkid]);
 			clear_nvector(w_iters[eid][chunkid], sm.sizePsi);
 		}
 	}
