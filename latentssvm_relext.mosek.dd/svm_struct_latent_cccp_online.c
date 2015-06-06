@@ -830,7 +830,7 @@ int main(int argc, char* argv[]) {
 	double ***w_iters = (double**) malloc(totalEpochs*sizeof(double**));
 	printf("--2: After 1st malloc -- %x\n", w_iters);
 	for(eid = 0; eid < totalEpochs; eid++){
-		printf("2.5..... allocated ... %x\n",w_iters[eid]);
+		printf("2.5... id = %d, .. allocated ... %x\n",eid, w_iters[eid]);
 		w_iters[eid] = (double*) malloc(numChunks*sizeof(double*));
 	}
 	printf("--3: After 2nd malloc \n");
