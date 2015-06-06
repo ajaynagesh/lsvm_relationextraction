@@ -828,10 +828,10 @@ int main(int argc, char* argv[]) {
 	 * After ‘n’ epochs, we will have ‘k*n’ weight vectors.
 	 */
 	double ***w_iters = (double**) malloc(totalEpochs*sizeof(double**));
-	printf("--2: After 1st malloc -- %x\n", w_iters);
+	printf("--2: After 1st malloc -- %x; sz = %d\n", w_iters, totalEpochs*sizeof(double**));
 	for(eid = 0; eid < totalEpochs; eid++){
 		w_iters[eid] = (double*) malloc(numChunks*sizeof(double*));
-		printf("2.5... id = %d, .. allocated ... %x\n",eid, w_iters[eid]);
+		printf("2.5... id = %d, .. allocated ... %x; sz = %d\n",eid, w_iters[eid],numChunks*sizeof(double*));
 	}
 	printf("--3: After 2nd malloc \n");
 	for(eid = 0; eid < totalEpochs; eid++){
