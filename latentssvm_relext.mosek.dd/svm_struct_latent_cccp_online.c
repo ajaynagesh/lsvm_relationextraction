@@ -845,7 +845,7 @@ int main(int argc, char* argv[]) {
 
 	printf("(OnlineSVM) : Created the online variables\nw_iters = %x\nvectorsz = %ld\n",w_iters,sm.sizePsi);
 
-	exit(0);
+	//exit(0);
 
 	// Code to split the given dataset (X,Y) into k chunks
 	SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
@@ -1033,6 +1033,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	write_struct_model_online(modelfile, &sm, &sparm, totalEpochs, numChunks);
+	printf("(ONLINE LEARNING) : Completed Writing model file.\nModel file present at %s\n",modelfile);
 
 	return(0);
 
