@@ -755,6 +755,7 @@ int main(int argc, char* argv[]) {
 	LATENT_VAR *imputed_h = NULL;
 
 	time_t time_start, time_end;
+	time_t time_start_full, time_end_full;
 
 	/* read input parameters */
 	my_read_input_parameters(argc, argv, trainfile, modelfile, &learn_parm, &kernel_parm, &sparm);
@@ -865,6 +866,7 @@ int main(int argc, char* argv[]) {
 	 * Having divided the dataset (X,Y) into set of 'k' chunks / sub-datasets (X_1,Y_1) ... (X_k, Y_k)
 	 * Do the following do while routine for one set of datapoints (sub-datasets)
 	 */
+	time(&time_start_full);
 	for(eid = 0; eid < totalEpochs; eid++)
 	{
 		printf("(ONLINE LEARNING) : EPOCH %d\n",eid);
@@ -1034,6 +1036,12 @@ int main(int argc, char* argv[]) {
 
 	write_struct_model_online(modelfile, &sm, &sparm, totalEpochs, numChunks);
 	printf("(ONLINE LEARNING) : Completed Writing model file.\nModel file present at %s\n",modelfile);
+
+	time(&time_end_full);
+
+	char msg[20];
+	sprintf(msg,"(ONLINE LEARNING) : Total Time Taken : ");
+	print_time(time_start_full, time_end_full, msg);
 
 	return(0);
 
