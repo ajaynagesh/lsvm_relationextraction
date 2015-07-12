@@ -702,7 +702,7 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	datasetStartIdx = (numChunks-1) * chunkSz; // Calculate the startoffset using the old chunk sz
 	chunkSz = dataset_sz - (numChunks-1) * chunkSz; // Calculate the chunk size of the last chunk
 	create_chunk(dataset, datasetStartIdx, &(chunks[numChunks-1]), chunkSz);
-	printf("(OnlineSVM): Creating %d chunk \n", numChunks-1);
+	printf("(OnlineSVM): Creating %d chunk \n", numChunks);
 	//chunks[numChunks-1] = *c;
 
 	//printf("AddAj-1 : %x\t%x\t%x\n",chunk->examples->y.relations, chunk->examples->x.mention_features, chunk->examples->h.mention_labels);
