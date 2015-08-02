@@ -8,7 +8,11 @@ import ilog.cplex.IloCplex;
 import ilpInference.InferenceWrappers;
 import ilpInference.YZPredicted;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -19,6 +23,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import com.sun.org.apache.xml.internal.serialize.OutputFormat;
 
 import javaHelpers.FindMaxViolatorHelperAll.LabelWeights;
 import edu.stanford.nlp.stats.Counter;
@@ -77,7 +83,7 @@ public class ModelLagrangian {
 	}
 	
 	public static Pair<ArrayList<YZPredicted>, Double> optModelLagAugmentedLPrelaxation(ArrayList<DataItem> dataset, 
-			LabelWeights [] zWeights, double Lambda[][], ArrayList<YZPredicted> YtildeStar, double rho) throws IloException{
+			LabelWeights [] zWeights, double Lambda[][], ArrayList<YZPredicted> YtildeStar, double rho) throws IloException, FileNotFoundException{
 
 		long start = System.currentTimeMillis();
 		long curtime = System.currentTimeMillis();
@@ -90,6 +96,8 @@ public class ModelLagrangian {
 		ArrayList<YZPredicted> YtildeDashStar = new ArrayList<YZPredicted>();
 
 		IloCplex cplexILPModel = new IloCplex();
+		OutputStream o = new FileOutputStream("/tmp/abc.out");
+		cplexILPModel.setOut(o);
 		for(int i = 0; i < dataset.size(); i++){
 
 			if(i % 10000 == 0){
@@ -248,8 +256,7 @@ public class ModelLagrangian {
 				
 				// solve the model
 				if ( cplexILPModel.solve() ) {
-					System.out.println("Solution status = " + cplexILPModel.getStatus());
-					System.out.println(" cost = " + cplexILPModel.getObjValue());
+//					System.out.println("Solved LP " + cplexILPModel.getStatus() + ".  cost = " + cplexILPModel.getObjValue());
 				}
 				
 				for(int m = 0; m < numOfMentions; m++){
@@ -458,7 +465,7 @@ public class ModelLagrangian {
 		String currentParametersFile = args[0]; // tmpfiles/max_violator_all;
 		String datasetFile = args[1]; // dataset/reidel_trainSVM.small.data;
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
-		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
+		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile,0, 10);
 		
 		double Lambda[][] = new double[dataset.size()][52];
 

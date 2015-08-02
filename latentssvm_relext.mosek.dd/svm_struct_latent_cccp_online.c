@@ -63,14 +63,16 @@ double* add_list_nn(SVECTOR *a, long totwords)
     for(i=0;i<=totwords;i++) 
       sum[i]=0;
 
-    for(f=a;f;f=f->next)  
+    for(f=a;f;f=f->next){
       add_vector_ns(sum,f,f->factor);
+    }
+
 
     return(sum);
 }
 
 
-SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double *margin2) {
+SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double *margin2, long datasetStartIdx, long chunkSz) {
 
   long i;
   SVECTOR *f, *fy, *fybar, *lhs;
@@ -88,12 +90,13 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
   time_t mv_start, mv_end;
 
   time(&mv_start);
-  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight);
+  find_most_violated_constraint_marginrescaling_all(ybar_all, hbar_all, sm, sparm, m, tmpdir, trainfile, frac_sim, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, Fweight, datasetStartIdx, chunkSz);
   time(&mv_end);
 
 #if (DEBUG_LEVEL==1)
   print_time(mv_start, mv_end, "Max violators");
 #endif
+
 
   /* find cutting plane */
   lhs = NULL;
@@ -117,6 +120,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
       f->factor*=1.0/m;
       //f->factor*=ex[i].x.example_cost/m;
     }
+
     for (f=fybar;f;f=f->next) {
       f->factor*=-1.0/m;
       //f->factor*=-ex[i].x.example_cost/m;
@@ -134,6 +138,10 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
   /* compact the linear representation */
   new_constraint = add_list_nn(lhs, sm->sizePsi);
+
+//  printf("After this segfault ? \n");fflush(stdout);
+//  printf("%x\n",new_constraint);
+
   free_svector(lhs);
 
   l=0;
@@ -162,7 +170,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 }
 
 
-double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash ) {
+double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash, long datasetStartIdx, long chunkSz ) {
   long i,j;
   double xi;
   double *alpha;
@@ -229,7 +237,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
   printf("ITER 0 \n(before cutting plane) \n");
   double margin2;
-  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
+  new_constraint = find_cutting_plane (ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, datasetStartIdx, chunkSz);
   value = margin2 - sprod_ns(w, new_constraint);
 	
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
@@ -370,7 +378,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
       }
     }
 
-  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2);
+  new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho_admm, isExhaustive, isLPrelaxation, &margin2, datasetStartIdx, chunkSz);
  //   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
     value = margin2 - sprod_ns(w, new_constraint);
 
@@ -497,38 +505,311 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
 }
 
+// chunkid should start from 1
+void create_chunk(EXAMPLE *dataset, long datasetStartIdx, SAMPLE *sample, long chunkSz){
 
+		//SAMPLE *sample = (SAMPLE*)malloc(sizeof(SAMPLE));
+
+		long eg_id;
+		int num_mentions, num_rels, total_num_rels;
+
+		// init. 'SAMPLE'
+		sample->n = chunkSz;
+		sample->examples = (EXAMPLE*)malloc(sizeof(EXAMPLE)*chunkSz);
+
+		//printf("sample->examples %x\n", sample->examples);
+
+		for(eg_id = 0; eg_id < chunkSz; eg_id ++){
+			//printf("----\nEg : %ld\n", eg_id);
+
+			//init 'EXAMPLE'
+			EXAMPLE *e = &(sample->examples[eg_id]);
+
+			//printf("%x\t%x\n",e,sample->examples);
+
+			num_rels = dataset[datasetStartIdx + eg_id].y.num_relations;
+			//printf("Num_relations %d\n", num_rels);
+
+			//init 'LABEL' (e->y)
+			e->y.num_relations = num_rels;
+
+			if(num_rels > 0) {
+				int yid;
+				e->y.relations = (int*)malloc((sizeof(int))*num_rels);
+
+//				printf("e->y.relations = %x\n", e->y.relations);
+				for(yid = 0; yid < num_rels; yid++){
+					//printf("Ajay -1\n");
+					e->y.relations[yid] = dataset[datasetStartIdx + eg_id].y.relations[yid]; // --> eg. i -- relation label
+					//printf("Ajay -2 %d\n", dataset[datasetStartIdx + eg_id].y.relations[yid]);
+
+//					printf("e->y.relations = %x\n", e->y.relations);
+//					printf("e->y.relations = %d\n", *(e->y.relations));
+//					printf("Ajay %d\n ",e->y.relations[yid]);
+//					printf("e->y.relations = %d\n", *(e->y.relations));
+				}
+				//printf("\n");
+			}
+
+			num_mentions = dataset[datasetStartIdx + eg_id].x.num_mentions; // --> eg. i -- no. of mention labels
+//			printf("Num_mentions %d\n", num_mentions);
+
+			// init 'PATTERN' (e->x)
+			e->x.num_mentions = num_mentions;
+			e->x.mention_features = (SVECTOR*)malloc(sizeof(SVECTOR)*num_mentions);
+//			printf("Ajay -3 \t e->x.mention_features = %x\n", e->x.mention_features);
+			// init 'LATENT_VAR' (e->h)
+			e->h.num_mentions = num_mentions;
+			// Each of the mention labels should be initialized to nil label
+			// But we do not have a specific nil label index now.
+			// Right now initialising to 0 (nillabel)
+			e->h.mention_labels = (int*) malloc(sizeof(int)*num_mentions);
+
+//			printf("Ajay -4\n");
+			int i;
+			for(i = 0; i < num_mentions; i ++){
+				e->h.mention_labels[i] = 0;
+			}
+//			printf("Ajay -5\nNum mentions : %d\n", num_mentions);
+			int m;
+			for(m = 0; m < num_mentions; m++){
+//				printf("Ajay -6- save\n");
+//				printf("Ajay -6.5 sz %s\n", (dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined));
+				//printf("(sz:%d)\t",f_sz);
+				char * f_sz_str = NULL;
+//				printf(" Ajay -6 (null str) %x\n", f_sz_str);
+				f_sz_str = (char*)malloc(sizeof(char)*10);// --> eg. i, men m -- sz of the Fvector
+//				printf("Ajay -6 (allocated str) %x\n", f_sz_str);
+				strncpy(f_sz_str, dataset[datasetStartIdx+eg_id].x.mention_features[m].userdefined, 10);
+//				printf("Ajay -6.6 %x\n", f_sz_str);
+				int f_sz = atoi(f_sz_str);
+//				printf("Ajay -6.62 %d\n", f_sz);
+				e->x.mention_features[m].userdefined =  f_sz_str;
+//				printf("Ajay -6.63 %x\n", e->x.mention_features[m].userdefined);
+//				printf("Ajay -7\te->x.mention_features[m].userdefined = %s \t e->x.mention_features[0].words = %x\n", e->x.mention_features[m].userdefined, e->x.mention_features[0].userdefined);
+				e->x.mention_features[m].words = (WORD*)malloc(sizeof(WORD)*(f_sz + 1));
+
+//				printf("Ajay -8 \t e->x.mention_features[0].words \n", e->x.mention_features[0].words);
+
+				int i;
+				for(i = 0; i < f_sz; i ++){
+					int f_id; float f_val;
+					//fscanf(fp, "%d:%f ", &f_id, &f_val);
+					// --> eg. i, men m -- Fvector (<fid:freq> <fid:freq> ....)
+					//printf("%d:%.1f ", f_id, f_val);
+
+					e->x.mention_features[m].words[i].wnum = dataset[datasetStartIdx+eg_id].x.mention_features[m].words[i].wnum;
+					e->x.mention_features[m].words[i].weight = dataset[datasetStartIdx+eg_id].x.mention_features[m].words[i].weight;
+
+				}
+
+//				printf("Ajay -8\n");
+				// Add 0 to the last word ... might be necessary somewhere
+				e->x.mention_features[m].words[i].wnum = 0;
+				e->x.mention_features[m].words[i].weight = 0;
+
+//				printf("Ajay -9\n");
+				//printf("\n");
+			}
+		}
+
+		//printf("AddAj : %x\t%x\t%x\n",sample->examples->y.relations, sample->examples->x.mention_features, sample->examples->h.mention_labels);
+		//return (sample);
+}
+
+SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
+
+//	printf("Entire Dataset : \n");
+//	test_print(*sample);
+//	printf("---------------------------------------------------------------------\n");
+//	printf("---------------------------------------------------------------------\n");
+
+	int dataset_sz = sample->n;
+	EXAMPLE *dataset = sample->examples;
+
+	// randomize the datapoints
+//	if(randomize == 1){
+//		randomize_dataset(sample);
+//	}
+
+	int i;
+	long chunkSz = dataset_sz / numChunks;
+	SAMPLE *chunks = (SAMPLE*) malloc(sizeof(SAMPLE)*numChunks) ;
+
+//	printf("Individual Chunks");
+//	printf("---------------------------------------------------------------------\n");
+
+	long datasetStartIdx;
+	// create until the last but one chunk
+	SAMPLE* c;
+	for(i = 1; i <= numChunks - 1; i++){
+		datasetStartIdx = (i-1)*chunkSz;
+		printf("(OnlineSVM): Creating %d chunk \n",i );
+		create_chunk(dataset, datasetStartIdx, &(chunks[i-1]), chunkSz);
+		//chunks[i-1] = *c;
+
+		//printf("AddAj-1 : %x\t%x\t%x\n",chunk->examples->y.relations, chunk->examples->x.mention_features, chunk->examples->h.mention_labels);
+
+//		printf("Chunk-id - %d", i);
+//		printf("---------------------------------------------------------------------\n");
+//		test_print(*chunk);
+//		printf("---------------------------------------------------------------------\n");
+	}
+	// create the last chunk
+	datasetStartIdx = (numChunks-1) * chunkSz; // Calculate the startoffset using the old chunk sz
+	chunkSz = dataset_sz - (numChunks-1) * chunkSz; // Calculate the chunk size of the last chunk
+	create_chunk(dataset, datasetStartIdx, &(chunks[numChunks-1]), chunkSz);
+	printf("(OnlineSVM): Creating %d chunk \n", numChunks);
+	//chunks[numChunks-1] = *c;
+
+	//printf("AddAj-1 : %x\t%x\t%x\n",chunk->examples->y.relations, chunk->examples->x.mention_features, chunk->examples->h.mention_labels);
+
+//	printf("Chunk-id - %d", numChunks);
+//	printf("---------------------------------------------------------------------\n");
+//	test_print(*chunk);
+//	printf("---------------------------------------------------------------------\n");
+
+//	printf("DONE PRINTING .. COME HERE PRONTO\n");
+
+	//exit(0);
+	return chunks;
+}
+
+
+void optimizeMultiVariatePerfMeasure(SAMPLE sample, long datasetStartIdx, long chunkSz, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
+		double C, double epsilon, double Cdash, int MAX_ITER, LEARN_PARM *learn_parm, char *trainfile, double *w){
+
+//	// Print the split dataset
+//	printf("In function\n");
+//	int x;
+//	//printf("AddAj-2 : %x\t%x\t%x\n",ex_chunk[x].y.relations, ex_chunk[x].x.mention_features, ex_chunk[x].h.mention_labels);
+//	printf("%d\t%d\n",x,sample.n);
+//	printf("-------------\n");
+//	test_print(sample);
+
+	int i;
+	time_t time_start, time_end;
+	double decrement;
+	double primal_obj, last_primal_obj;
+	double cooling_eps;
+	double stop_crit;
+	LATENT_VAR *imputed_h = NULL;
+
+	int m = sample.n;
+	SVECTOR **fycache, *diff, *fy;
+	EXAMPLE *ex = sample.examples;
+
+	/* some training information */
+	printf("C: %.8g\n", C);
+	printf("Cdash: %.8g\n", Cdash);
+	printf("epsilon: %.8g\n", epsilon);
+	printf("sample.n: %ld\n", m);
+	printf("sm->sizePsi: %ld\n", sm->sizePsi); fflush(stdout);
+
+	/* prepare feature vector cache for correct labels with imputed latent variables */
+	fycache = (SVECTOR**)malloc(m*sizeof(SVECTOR*));
+	for (i=0;i<m;i++) {
+		fy = psi(ex[i].x, ex[i].y, ex[i].h, sm, sparm);
+		diff = add_list_ss(fy);
+		free_svector(fy);
+		fy = diff;
+		fycache[i] = fy;
+	}
+
+	/* time taken stats */
+	time(&time_start);
+
+	/* outer loop: latent variable imputation */
+	int outer_iter = 0;
+	last_primal_obj = 0;
+	decrement = 0;
+	cooling_eps = 0.5*MAX(C,Cdash)*epsilon;
+	while ((outer_iter<2)||((!stop_crit)&&(outer_iter<MAX_OUTER_ITER))) {
+		printf("OUTER ITER %d\n", outer_iter); fflush(stdout);
+		/* cutting plane algorithm */
+		time_t cp_start, cp_end;
+		time(&cp_start);
+		primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, sm, sparm,
+				learn_parm->tmpdir, trainfile, learn_parm->frac_sim, learn_parm->Fweight,
+				learn_parm->dataset_stats_file, learn_parm->rho_admm, learn_parm->isExhaustive,
+				learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz);
+		time(&cp_end);
+
+#if(DEBUG_LEVEL==1)
+		char msg[20];
+		sprintf(msg,"OUTER ITER %d", outer_iter);
+		print_time(cp_start, cp_end, msg);
+#endif
+
+		/* compute decrement in objective in this outer iteration */
+		decrement = last_primal_obj - primal_obj;
+		last_primal_obj = primal_obj;
+		printf("primal objective: %.4f\n", primal_obj);
+		printf("decrement: %.4f\n", decrement); fflush(stdout);
+
+		stop_crit = (decrement<MAX(C, Cdash)*epsilon)&&(cooling_eps<0.5*MAX(C, Cdash)*epsilon+1E-8);
+
+		cooling_eps = -decrement*0.01;
+		cooling_eps = MAX(cooling_eps, 0.5*MAX(C,Cdash)*epsilon);
+		printf("cooling_eps: %.8g\n", cooling_eps);
+
+
+		/* impute latent variable using updated weight vector */
+		for(i = 0; i < m; i ++)
+			free_latent_var(ex[i].h);
+		if(imputed_h != NULL)
+			free(imputed_h);
+
+		imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * m);
+		infer_latent_variables_all(imputed_h, sm, sparm, m, learn_parm->tmpdir, trainfile, datasetStartIdx, chunkSz);
+
+		for (i=0;i<m;i++) {
+			//      free_latent_var(ex[i].h);
+			//      ex[i].h = infer_latent_variables(ex[i].x, ex[i].y, &sm, &sparm); // ILP for  Pr (Z | Y_i, X_i) in our case
+			ex[i].h = imputed_h[i];
+		}
+		/* re-compute feature vector cache */
+		for (i=0;i<m;i++) {
+			free_svector(fycache[i]);
+			fy = psi(ex[i].x, ex[i].y, ex[i].h, &sm, &sparm);
+			diff = add_list_ss(fy);
+			free_svector(fy);
+			fy = diff;
+			fycache[i] = fy;
+		}
+		printf("(OnlineSVM) .. finished outer_iter %d\n",outer_iter);
+		outer_iter++;
+	} // end outer loop
+
+	time(&time_end);
+
+	#if (DEBUG_LEVEL==1)
+	  print_time(time_start, time_end, "Total time");
+	#endif
+
+	for(i=0;i<m;i++) {
+		free_svector(fycache[i]);
+	}
+	free(fycache);
+}
 
 int main(int argc, char* argv[]) {
 
-	// The file to create the online version of the code
+  // The file to create the online version of the code
 
-	printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. with weighting of Fscores .. no regions file");
+  printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. with weighting of Fscores .. no regions file");
 
   double *w; /* weight vector */
-  int outer_iter;
-  long m, i;
   double C, epsilon, Cdash;
   LEARN_PARM learn_parm;
   KERNEL_PARM kernel_parm;
   char trainfile[1024];
   char modelfile[1024];
   int MAX_ITER;
-  /* new struct variables */
-  SVECTOR **fycache, *diff, *fy;
-  EXAMPLE *ex;
+
   SAMPLE sample;
   STRUCT_LEARN_PARM sparm;
   STRUCTMODEL sm;
-  
-  double decrement;
-  double primal_obj, last_primal_obj;
-  double cooling_eps; 
-  double stop_crit; 
- 
-  LATENT_VAR *imputed_h = NULL;
-
-  time_t time_start, time_end;
 
   /* read input parameters */
   my_read_input_parameters(argc, argv, trainfile, modelfile, &learn_parm, &kernel_parm, &sparm);
@@ -541,151 +822,43 @@ int main(int argc, char* argv[]) {
   /* read in examples */
   //strcpy(trainfile, "dataset/reidel_trainSVM.small.data");
   sample = read_struct_examples(trainfile,&sparm);
-
-  ex = sample.examples;
-  m = sample.n;
-
-  ////****** testing of the lossF1 function
-//  LABEL *ybar_all = (LABEL*) malloc (4*sizeof(LABEL));
-//  ybar_all[0].num_relations = 2; ybar_all[0].relations = (int*)malloc(2*sizeof(int)); ybar_all[0].relations[0] = 1, ybar_all[0].relations[1] = 35;
-//  ybar_all[1].num_relations = 1; ybar_all[1].relations = (int*)malloc(sizeof(int)); ybar_all[1].relations[0] = 36;
-//  ybar_all[2].num_relations = 1; ybar_all[2].relations = (int*)malloc(sizeof(int)); ybar_all[2].relations[0] = 25;//, ybar_all[2].relations[1] = 36;
-//  ybar_all[3].num_relations = 2; ybar_all[3].relations = (int*)malloc(2*sizeof(int)); ybar_all[3].relations[0] = 1, ybar_all[3].relations[1] = 51;
-//  lossF1(ex, m, ybar_all, &sparm);
-//  printf("done");
-//  exit(0);
-  //test_print(sample);
-
   
   /* initialization */
   init_struct_model(sample,&sm,&sparm,&learn_parm,&kernel_parm);
-
-//  ex[2].h.mention_labels[1] = 5;
-//  ex[2].h.mention_labels[0] = 5;
-//  SVECTOR *fvec1 = psi(ex[2].x,ex[2].y,ex[2].h,&sm, &sparm);
-//  exit(0);
 
   w = create_nvector(sm.sizePsi);
   clear_nvector(w, sm.sizePsi);
   sm.w = w; /* establish link to w, as long as w does not change pointer */
 
-  // Testing: infer_latent_variables(ex[0].x, ex[0].y ,&sm, &sparm);
-  // exit(0);
+  int numChunks = 5;
+  SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
 
-  // Testing loss function
-//  LABEL y, ybar;
-//  y.num_relations = 0; //y.relations = (int*)malloc(sizeof(int)*3); y.relations[0] = 5; y.relations[1] = 7; y.relations[2] = 8;
-//  ybar.num_relations = 2; ybar.relations = (int*)malloc(sizeof(int)*2); ybar.relations[0] = 5; ybar.relations[1] = 7;
-//  LATENT_VAR hbar;
-//  double lossval = loss(y,ybar,hbar,&sparm);
-//  printf("Loss Val : %f\n", lossval);
-//  exit(0);
+  printf("(OnlineSVM) : After the database split\n");
 
-  /* some training information */
-  printf("C: %.8g\n", C);
-  printf("Cdash: %.8g\n", Cdash);
-  printf("epsilon: %.8g\n", epsilon);
-  printf("sample.n: %ld\n", sample.n); 
-  printf("sm.sizePsi: %ld\n", sm.sizePsi); fflush(stdout);
-  
-
-  /* impute latent variable for first iteration */
-  // Ajay: Already initialised in read_struct_examples
-  //init_latent_variables(&sample,&learn_parm,&sm,&sparm);
-
-  /* prepare feature vector cache for correct labels with imputed latent variables */
-  fycache = (SVECTOR**)malloc(m*sizeof(SVECTOR*));
-  for (i=0;i<m;i++) {
-    fy = psi(ex[i].x, ex[i].y, ex[i].h, &sm, &sparm);
-    diff = add_list_ss(fy);
-    free_svector(fy);
-    fy = diff;
-    fycache[i] = fy;
-  }
-
-  /* time taken stats */
-  time(&time_start);
-    
-  /* outer loop: latent variable imputation */
-  outer_iter = 0;
-  last_primal_obj = 0;
-  decrement = 0;
-  cooling_eps = 0.5*MAX(C,Cdash)*epsilon;
-  while ((outer_iter<2)||((!stop_crit)&&(outer_iter<MAX_OUTER_ITER))) {
-    printf("OUTER ITER %d\n", outer_iter); fflush(stdout);
-    /* cutting plane algorithm */
-    time_t cp_start, cp_end;
-    time(&cp_start);
-    primal_obj = cutting_plane_algorithm(w, m, MAX_ITER, C, cooling_eps, fycache, ex, &sm, &sparm, learn_parm.tmpdir, trainfile, learn_parm.frac_sim, learn_parm.Fweight, learn_parm.dataset_stats_file,
-    		learn_parm.rho_admm, learn_parm.isExhaustive, learn_parm.isLPrelaxation, Cdash);
-    time(&cp_end);
-
-#if(DEBUG_LEVEL==1)
-    char msg[20];
-    sprintf(msg,"OUTER ITER %d", outer_iter);
-    print_time(cp_start, cp_end, msg);
-#endif
-    
-    /* compute decrement in objective in this outer iteration */
-    decrement = last_primal_obj - primal_obj;
-    last_primal_obj = primal_obj;
-    printf("primal objective: %.4f\n", primal_obj);
-    printf("decrement: %.4f\n", decrement); fflush(stdout);
-    
-    stop_crit = (decrement<MAX(C, Cdash)*epsilon)&&(cooling_eps<0.5*MAX(C, Cdash)*epsilon+1E-8);
-
-    cooling_eps = -decrement*0.01;
-    cooling_eps = MAX(cooling_eps, 0.5*MAX(C,Cdash)*epsilon);
-    printf("cooling_eps: %.8g\n", cooling_eps); 
-
-  
-    /* impute latent variable using updated weight vector */
-    for(i = 0; i < m; i ++)
-    	free_latent_var(ex[i].h);
-    if(imputed_h != NULL)
-    	free(imputed_h);
-
-    imputed_h = (LATENT_VAR*)malloc(sizeof(LATENT_VAR) * m);
-    infer_latent_variables_all(imputed_h, &sm, &sparm, m, learn_parm.tmpdir, trainfile);
-
-    for (i=0;i<m;i++) {
-//      free_latent_var(ex[i].h);
-//      ex[i].h = infer_latent_variables(ex[i].x, ex[i].y, &sm, &sparm); // ILP for  Pr (Z | Y_i, X_i) in our case
-    	ex[i].h = imputed_h[i];
-    }
-    /* re-compute feature vector cache */
-    for (i=0;i<m;i++) {
-      free_svector(fycache[i]);
-      fy = psi(ex[i].x, ex[i].y, ex[i].h, &sm, &sparm);
-      diff = add_list_ss(fy);
-      free_svector(fy);
-      fy = diff;
-      fycache[i] = fy;
-    }
-
-
-    outer_iter++;  
-  } // end outer loop
-  
+//  // Print the split dataset
+//  int x;
+//  for(x = 0; x < numChunks; x++){
+//	  if(x != 1)
+//		  continue;
+//	  //printf("AddAj-2 : %x\t%x\t%x\n",ex_chunk[x].y.relations, ex_chunk[x].x.mention_features, ex_chunk[x].h.mention_labels);
+//	  printf("%d\t%d\n",x,dataset_chunks[x].n);
+//	  printf("-------------\n");
+//	  test_print(dataset_chunks[x]);
+//  }
+  long chunkId = 1;
+  long datasetStartIdx = chunkId * sample.n / numChunks;
+  long chunkSz = (numChunks-chunkId-1 == 0) ? (sample.n - ((numChunks-1)*(sample.n / numChunks)) )  : (sample.n / numChunks);
+  printf("whole dataset Sz: %d\ndataset Start : %d\nchunkSz = %d\n",sample.n,datasetStartIdx, chunkSz);
+  //exit(0);
+  optimizeMultiVariatePerfMeasure(dataset_chunks[chunkId], datasetStartIdx, chunkSz, &sm, &sparm, C, Cdash, epsilon, MAX_ITER, &learn_parm, trainfile, w);
 
   /* write structural model */
   write_struct_model(modelfile, &sm, &sparm);
   // skip testing for the moment  
 
-  /* free memory */
+  /* free memory */ //TODO: Need to change this ...
   free_struct_sample(sample);
   free_struct_model(sm, &sparm);
-  for(i=0;i<m;i++) {
-    free_svector(fycache[i]);
-  }
-  free(fycache);
-
-
-  time(&time_end);
-
-#if (DEBUG_LEVEL==1)
-  print_time(time_start, time_end, "Total time");
-#endif
 
   return(0); 
   

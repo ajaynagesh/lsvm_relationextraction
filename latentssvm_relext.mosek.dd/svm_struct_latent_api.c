@@ -432,7 +432,7 @@ void write_to_file_params_t(double *w, long num_of_features, long total_number_r
 
 }
 
-void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Fweight){
+void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Fweight, long datasetStartIdx, long chunkSz){
 
 	// 1. Write input to a file
 	char *filename = (char*) malloc(100);
@@ -450,8 +450,8 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 
 	char *cmd = malloc(1000);
 	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
-			" java -Xmx16G -cp java/bin:java/lib/* "
-			" -Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
+			" java -Xmx1G -cp java/bin:java/lib/* "
+			" -Djava.library.path='/home/ajay/Research/software/lp_solve/:/home/ajay/Research/software/mosek.5/5/tools/platform/linux64x86/bin/:/home/ajay/Research/software/x86-64_sles10_4.1/' "
 			" javaHelpers.FindMaxViolatorHelperAll ");
 	strcat(cmd,filename);
 	strcat(cmd, " ");
@@ -473,6 +473,13 @@ void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_V
 	strcat(cmd, " ");
 	char Fweight_str[10]; sprintf(Fweight_str, "%g", Fweight);
 	strcat(cmd, Fweight_str);
+	strcat(cmd, " ");
+	char datasetStartIdx_str[10]; sprintf(datasetStartIdx_str, "%ld", datasetStartIdx);
+	strcat(cmd, datasetStartIdx_str);
+	strcat(cmd, " ");
+	char chunkSz_str[10]; sprintf(chunkSz_str, "%ld", chunkSz);
+	strcat(cmd, chunkSz_str);
+	strcat(cmd, " ");
 
 	printf("Executing cmd : %s\n", cmd);fflush(stdout);
 	system(cmd);
@@ -577,7 +584,7 @@ void find_most_violated_constraint_marginrescaling(PATTERN x, LABEL y, LABEL *yb
 
 }
 
-void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char* tmpdir, char *trainfile){
+void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char* tmpdir, char *trainfile, long datasetStartIdx, long chunkSz){
 
 	// 1. Write input to a file
 	//char *filename = "tmpfiles/inf_lat_var_all";
@@ -595,12 +602,20 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	char *cmd = malloc(1000);
 	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
 			"java -Xmx8G -cp java/bin:java/lib/*  "
-			"-Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
+			"-Djava.library.path='/home/ajay/Research/software/lp_solve/:/home/ajay/Research/software/mosek.5/5/tools/platform/linux64x86/bin/:/home/ajay/Research/software/x86-64_sles10_4.1/' "
 			"javaHelpers.InferLatentVarHelperAll ");
 	strcat(cmd,filename);
 	//strcat(command," dataset/reidel_trainSVM.data");
 	strcat(cmd, " ");
 	strcat(cmd, trainfile);
+	strcat(cmd, " ");
+	char datasetStartIdx_str[10]; sprintf(datasetStartIdx_str, "%ld", datasetStartIdx);
+	strcat(cmd, datasetStartIdx_str);
+	strcat(cmd, " ");
+	char chunkSz_str[10]; sprintf(chunkSz_str, "%ld", chunkSz);
+	strcat(cmd, chunkSz_str);
+	strcat(cmd, " ");
+
 		//printf("Running : %s\n", command);
 	printf("Executing cmd : %s\n", cmd);fflush(stdout);
 	system(cmd);

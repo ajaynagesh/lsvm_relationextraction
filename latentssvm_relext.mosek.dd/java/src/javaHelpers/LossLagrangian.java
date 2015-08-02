@@ -238,7 +238,7 @@ public class LossLagrangian {
 			else {
 				currentLoss = maxNeighbourLoss;
 				current_FP_FN = bestNeighbour;
-				System.out.println("[admm] Log: (Local Search) -- intermediate points .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
+//				System.out.println("[admm] Log: (Local Search) -- intermediate points .... " + currentLoss + " : (" + current_FP_FN.first() +  ", "+ current_FP_FN.second() + ")");
 			}
 			
 		}

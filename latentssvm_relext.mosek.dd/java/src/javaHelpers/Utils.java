@@ -40,7 +40,7 @@ public class Utils {
 	
 	}
 
-	public static ArrayList<DataItem> populateDataset(String filename) throws IOException{
+	public static ArrayList<DataItem> populateDataset(String filename, long datasetStartIdx, long chunkSz) throws IOException{
 		ArrayList<DataItem> dataset = new ArrayList<DataItem>();
 		
 		BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
@@ -71,6 +71,9 @@ public class Utils {
 				}
 				example.pattern.add(mentionVector);
 			}
+			
+			if(i < datasetStartIdx || i >= datasetStartIdx + chunkSz)
+				continue;
 			
 			dataset.add(example);
 		}

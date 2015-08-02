@@ -127,12 +127,22 @@ public class FindMaxViolatorHelperAll {
 	
 	static int totNumberofRels = 0;
 	
-	static DatasetStats readDatasetStats(String filename) throws NumberFormatException, IOException{
+	static DatasetStats readDatasetStats(String filename, ArrayList<DataItem> dataset) throws NumberFormatException, IOException{
 		BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
 		int N = Integer.parseInt(br.readLine());
 		int Np = Integer.parseInt(br.readLine());
 		int L = Integer.parseInt(br.readLine());
 		br.close();
+		
+		N = Np = 0;
+		for(int i=0; i < dataset.size(); i++){
+			DataItem d = dataset.get(i);
+			if(d.ylabel.length > 0){
+				N++;
+				Np += d.ylabel.length;
+			}
+				
+		}
 		
 		DatasetStats stats = new DatasetStats(N, Np, L);
 		return stats;
@@ -145,10 +155,12 @@ public class FindMaxViolatorHelperAll {
 		double simFracParam = Double.parseDouble(args[2]);
 		String datasetStatsFile = args[3];
 		double rho;
+		long datasetStartIdx = Long.parseLong(args[8]);
+		long chunkSz = Long.parseLong(args[9]);
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
-		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
+		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile, datasetStartIdx, chunkSz);
 		
-		DatasetStats stats = readDatasetStats(datasetStatsFile);
+		DatasetStats stats = readDatasetStats(datasetStatsFile, dataset);
 		System.out.println(stats);
 		
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(currentParametersFile+".result")));
@@ -161,6 +173,7 @@ public class FindMaxViolatorHelperAll {
 			boolean isExhaustive = Integer.parseInt(args[5]) == 1 ? true : false; 
 			boolean isLPrelaxation = Integer.parseInt(args[6]) == 1 ? true : false;
 			double Fweight = Double.parseDouble(args[7]);
+
 			yzPredictedAll = OptimizeLossAugInference.optimizeLossAugInferenceDD_ADMM(dataset, zWeights, simFracParam, stats.maxFP, stats.maxFN, stats.Np, rho, isExhaustive, isLPrelaxation, Fweight);
 		}
 		else {

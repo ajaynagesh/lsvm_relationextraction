@@ -427,7 +427,7 @@ public class OptimizeLossAugInference {
 		double simFracParam = Double.parseDouble(args[2]);
 		
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
-		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile);
+		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile, 0, 10);
 		String regionsFile = "regions_coeff_binary.txt";
 		int maxFP = 0 , maxFN = 0, Np = 0;
 		ArrayList<YZPredicted> yzPredictedAll = optimizeLossAugInferenceDD(dataset, zWeights, simFracParam, maxFP, maxFN, Np);
