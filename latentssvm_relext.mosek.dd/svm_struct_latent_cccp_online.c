@@ -71,7 +71,6 @@ double* add_list_nn(SVECTOR *a, long totwords)
     return(sum);
 }
 
-
 SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long m, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char* tmpdir, char *trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double *margin2, long datasetStartIdx, long chunkSz) {
 
   long i;
@@ -171,6 +170,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
 
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash, long datasetStartIdx, long chunkSz ) {
+	  printf("Addr. of w (inside cp_algo) %x\t%x\n",w,sm->w);
   long i,j;
   double xi;
   double *alpha;
@@ -675,9 +675,8 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	return chunks;
 }
 
-
 void optimizeMultiVariatePerfMeasure(SAMPLE sample, long datasetStartIdx, long chunkSz, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
-		double C, double epsilon, double Cdash, int MAX_ITER, LEARN_PARM *learn_parm, char *trainfile, double *w){
+		double C, double Cdash, double epsilon, int MAX_ITER, LEARN_PARM *learn_parm, char *trainfile, double *w){
 
 //	// Print the split dataset
 //	printf("In function\n");
@@ -686,6 +685,7 @@ void optimizeMultiVariatePerfMeasure(SAMPLE sample, long datasetStartIdx, long c
 //	printf("%d\t%d\n",x,sample.n);
 //	printf("-------------\n");
 //	test_print(sample);
+	printf("Addr. of w (inside opt_mult_perf_measure) %x\t%x\n",w,sm->w);
 
 	int i;
 	time_t time_start, time_end;
@@ -830,6 +830,8 @@ int main(int argc, char* argv[]) {
   clear_nvector(w, sm.sizePsi);
   sm.w = w; /* establish link to w, as long as w does not change pointer */
 
+  printf("Addr. of w (init) %x\t%x\n",w,sm.w);
+
   int numChunks = 5;
   SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
 
@@ -850,6 +852,8 @@ int main(int argc, char* argv[]) {
   long chunkSz = (numChunks-chunkId-1 == 0) ? (sample.n - ((numChunks-1)*(sample.n / numChunks)) )  : (sample.n / numChunks);
   printf("whole dataset Sz: %d\ndataset Start : %d\nchunkSz = %d\n",sample.n,datasetStartIdx, chunkSz);
   //exit(0);
+  printf("Ajay: epsilon: %.8g\n", epsilon);
+
   optimizeMultiVariatePerfMeasure(dataset_chunks[chunkId], datasetStartIdx, chunkSz, &sm, &sparm, C, Cdash, epsilon, MAX_ITER, &learn_parm, trainfile, w);
 
   /* write structural model */
