@@ -47,6 +47,112 @@ void test_print(SAMPLE sample){
 	}
 }
 
+SAMPLE read_struct_examples_chunk(char *file) {
+/*
+  Read input examples {(x_1,y_1),...,(x_n,y_n)} from file.
+  The type of pattern x and label y has to follow the definition in
+  svm_struct_latent_api_types.h. Latent variables h can be either
+  initialised in this function or by calling init_latent_variables().
+*/
+	SAMPLE sample;
+
+	FILE *fp = fopen(file,"r");
+	if (fp==NULL) {
+		printf("Cannot open input file %s!\n", file);
+		exit(1);
+	}
+
+	long int num_egs = 0, eg_id;
+	int num_mentions, num_rels, total_num_rels;
+
+	fscanf(fp, "%ld\n", &num_egs);// --> no. of entity pairs (egs)
+	//printf("Number of examples : %ld\n", num_egs);
+
+	fscanf(fp, "%d\n", &total_num_rels); // --> Total number of relation labels
+	//printf("Total number of relation labels: %d\n", total_num_rels);
+
+	// init. 'SAMPLE'
+	sample.n = num_egs;
+	sample.examples = (EXAMPLE*)malloc(sizeof(EXAMPLE)*num_egs);
+
+	for(eg_id = 0; eg_id < num_egs; eg_id ++){
+		//printf("----\nEg : %ld\n", eg_id);
+
+		//init 'EXAMPLE'
+		EXAMPLE *e = &(sample.examples[eg_id]);
+
+		fscanf(fp, "%d\n", &num_rels); // --> eg. i -- no. of relation labels
+		//printf("Num_relations %d\n", num_rels);
+
+		//init 'LABEL' (e->y)
+		e->y.num_relations = num_rels;
+
+		if(num_rels > 0) {
+			int y[num_rels];
+			int yid;
+			for(yid = 0; yid < num_rels; yid++){
+				fscanf(fp, "%d\n", (y+yid)); // --> eg. i -- relation label
+			}
+			e->y.relations = (int*)malloc(sizeof(int)*num_rels);
+			for(yid = 0; yid < num_rels; yid++){
+				//printf("%d ",y[yid]);
+				e->y.relations[yid] = y[yid];
+			}
+			//printf("\n");
+		}
+
+		fscanf(fp, "%d\n", &num_mentions); // --> eg. i -- no. of mention labels
+		//printf("Num_mentions %d\n", num_mentions);
+
+		// init 'PATTERN' (e->x)
+		e->x.num_mentions = num_mentions;
+		e->x.mention_features = (SVECTOR*)malloc(sizeof(SVECTOR)*num_mentions);
+
+		// init 'LATENT_VAR' (e->h)
+		e->h.num_mentions = num_mentions;
+		// Each of the mention labels should be initialized to nil label
+		// But we do not have a specific nil label index now.
+		// Right now initialising to 0 (nillabel)
+		e->h.mention_labels = (int*) malloc(sizeof(int)*num_mentions);
+		int i;
+		for(i = 0; i < num_mentions; i ++){
+			e->h.mention_labels[i] = 0;
+		}
+
+		int m;
+		for(m = 0; m < num_mentions; m++){
+			int f_sz;
+			fscanf(fp, "%d\t", &f_sz); // --> eg. i, men m -- sz of the Fvector
+			//printf("(sz:%d)\t",f_sz);
+			char * f_sz_str = (char*)malloc(10);
+			sprintf(f_sz_str,"%d", f_sz);
+			e->x.mention_features[m].userdefined = f_sz_str;
+
+			e->x.mention_features[m].words = (WORD*)malloc(sizeof(WORD)*(f_sz + 1));
+
+			int i;
+			for(i = 0; i < f_sz; i ++){
+				int f_id; float f_val;
+				fscanf(fp, "%d:%f ", &f_id, &f_val); // --> eg. i, men m -- Fvector (<fid:freq> <fid:freq> ....)
+				//printf("%d:%.1f ", f_id, f_val);
+
+				e->x.mention_features[m].words[i].wnum = f_id;
+				e->x.mention_features[m].words[i].weight = f_val;
+			}
+
+			// Add 0 to the last word ... might be necessary somewhere
+			e->x.mention_features[m].words[i].wnum = 0;
+			e->x.mention_features[m].words[i].weight = 0;
+
+			//printf("\n");
+		}
+	}
+
+	fclose(fp);
+
+	return(sample);
+}
+
 SAMPLE read_struct_examples(char *file, STRUCT_LEARN_PARM *sparm) {
 /*
   Read input examples {(x_1,y_1),...,(x_n,y_n)} from file.

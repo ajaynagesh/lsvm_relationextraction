@@ -170,7 +170,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 
 
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash, long datasetStartIdx, long chunkSz ) {
-	  printf("Addr. of w (inside cp_algo) %x\t%x\n",w,sm->w);
+//	  printf("Addr. of w (inside cp_algo) %x\t%x\n",w,sm->w);
   long i,j;
   double xi;
   double *alpha;
@@ -675,17 +675,8 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	return chunks;
 }
 
-void optimizeMultiVariatePerfMeasure(SAMPLE sample, long datasetStartIdx, long chunkSz, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
+double optimizeMultiVariatePerfMeasure(SAMPLE sample, long datasetStartIdx, long chunkSz, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
 		double C, double Cdash, double epsilon, int MAX_ITER, LEARN_PARM *learn_parm, char *trainfile, double *w){
-
-//	// Print the split dataset
-//	printf("In function\n");
-//	int x;
-//	//printf("AddAj-2 : %x\t%x\t%x\n",ex_chunk[x].y.relations, ex_chunk[x].x.mention_features, ex_chunk[x].h.mention_labels);
-//	printf("%d\t%d\n",x,sample.n);
-//	printf("-------------\n");
-//	test_print(sample);
-	printf("Addr. of w (inside opt_mult_perf_measure) %x\t%x\n",w,sm->w);
 
 	int i;
 	time_t time_start, time_end;
@@ -791,6 +782,8 @@ void optimizeMultiVariatePerfMeasure(SAMPLE sample, long datasetStartIdx, long c
 		free_svector(fycache[i]);
 	}
 	free(fycache);
+
+	return primal_obj;
 }
 
 int main(int argc, char* argv[]) {
@@ -830,31 +823,96 @@ int main(int argc, char* argv[]) {
   clear_nvector(w, sm.sizePsi);
   sm.w = w; /* establish link to w, as long as w does not change pointer */
 
-  printf("Addr. of w (init) %x\t%x\n",w,sm.w);
+//  printf("Addr. of w (init) %x\t%x\n",w,sm.w);
 
-  int numChunks = 5;
-  SAMPLE *dataset_chunks = split_data(&sample, numChunks, 0); // do not randomize
+ 		time_t time_start_full, time_end_full;
+		int eid,totalEpochs=1;
+		int chunkid, numChunks=5;
+		double primal_obj_sum, primal_obj;
+		char chunk_trainfile[1024];
+		SAMPLE chunk_sample;
 
-  printf("(OnlineSVM) : After the database split\n");
+		/**
+			   * If we have ‘k’ instances and do ‘n’ epochs, after processing each chunk we update the weight.
+			   * Since we do ‘k’ updates, we will have ‘k’ weight vectors after each epoch.
+			   * After ‘n’ epochs, we will have ‘k*n’ weight vectors.
+		*/
+		// --------------------------------------------------------------------------------------------------------------------------------
+		double ***w_iters = (double**) malloc(totalEpochs*sizeof(double**));
+		printf("--2: After 1st malloc -- %x; sz = %d\n", w_iters, totalEpochs*sizeof(double**));
+		for(eid = 0; eid < totalEpochs; eid++){
+			w_iters[eid] = (double*) malloc(numChunks*sizeof(double*));
+			printf("2.5... id = %d, .. allocated ... %x; sz = %d\n",eid, w_iters[eid],numChunks*sizeof(double*));
+		}
+		printf("--3: After 2nd malloc \n");
+		for(eid = 0; eid < totalEpochs; eid++){
+			for(chunkid = 0; chunkid < numChunks; chunkid++){
+				w_iters[eid][chunkid] = create_nvector(sm.sizePsi);
+				printf("Confirming memory location : %x\n",w_iters[eid][chunkid]);
+				clear_nvector(w_iters[eid][chunkid], sm.sizePsi);
+			}
+		}
+		sm.w_iters = w_iters;
+		// --------------------------------------------------------------------------------------------------------------------------------
 
-//  // Print the split dataset
-//  int x;
-//  for(x = 0; x < numChunks; x++){
-//	  if(x != 1)
-//		  continue;
-//	  //printf("AddAj-2 : %x\t%x\t%x\n",ex_chunk[x].y.relations, ex_chunk[x].x.mention_features, ex_chunk[x].h.mention_labels);
-//	  printf("%d\t%d\n",x,dataset_chunks[x].n);
-//	  printf("-------------\n");
-//	  test_print(dataset_chunks[x]);
-//  }
-  long chunkId = 1;
-  long datasetStartIdx = chunkId * sample.n / numChunks;
-  long chunkSz = (numChunks-chunkId-1 == 0) ? (sample.n - ((numChunks-1)*(sample.n / numChunks)) )  : (sample.n / numChunks);
-  printf("whole dataset Sz: %d\ndataset Start : %d\nchunkSz = %d\n",sample.n,datasetStartIdx, chunkSz);
-  //exit(0);
-  printf("Ajay: epsilon: %.8g\n", epsilon);
+		/**
+		 * Having divided the dataset (X,Y) into set of 'k' chunks / sub-datasets (X_1,Y_1) ... (X_k, Y_k)
+		 * Do the following do while routine for one set of datapoints (sub-datasets)
+		 */
+		// --------------------------------------------------------------------------------------------------------------------------------
+		printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Changed .... Calling Java to split dataset\n");
+		char *cmd = malloc(1000);
+		strcpy(cmd,"java -Xmx1G -cp java/bin:java/lib/* "
+				" javaHelpers.splitDataset ");
+		strcat(cmd, trainfile);
+		strcat(cmd, " ");
+		char numChunks_str[10]; sprintf(numChunks_str, "%d", numChunks);
+		strcat(cmd, numChunks_str);
+		strcat(cmd, " ");
 
-  optimizeMultiVariatePerfMeasure(dataset_chunks[chunkId], datasetStartIdx, chunkSz, &sm, &sparm, C, Cdash, epsilon, MAX_ITER, &learn_parm, trainfile, w);
+		printf("Executing cmd : %s\n", cmd);fflush(stdout);
+		system(cmd);
+		// --------------------------------------------------------------------------------------------------------------------------------
+
+		time(&time_start_full);
+		for(eid = 0; eid < totalEpochs; eid++)
+		{
+			printf("(ONLINE LEARNING) : EPOCH %d\n",eid);
+			primal_obj_sum = 0.0;
+			for(chunkid = 1; chunkid <= numChunks; chunkid++)
+			{
+
+				int sz = sample.n / numChunks;
+				int datasetStartIdx = (chunkid - 1) * sz;
+				int chunkSz = (numChunks == chunkid) ? (sample.n - ((numChunks-1)*sz) ) : (sz);
+
+				memset(chunk_trainfile, 0, 1024);
+				strcat(chunk_trainfile,trainfile);
+				strcat(chunk_trainfile,".chunks/chunk.");
+				char chunkid_str[10];sprintf(chunkid_str, "%d", chunkid);
+				strcat(chunk_trainfile,chunkid_str);
+				printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Changed .... Reading chunked dataset\n");
+				printf("Chunk trainfile : %s\n",chunk_trainfile);
+				chunk_sample = read_struct_examples_chunk(chunk_trainfile);
+
+				primal_obj = optimizeMultiVariatePerfMeasure(chunk_sample, datasetStartIdx, chunkSz, &sm, &sparm, C, Cdash, epsilon, MAX_ITER, &learn_parm, trainfile, w);
+
+				printf("(ONLINE LEARNING) : FINISHED PROCESSING CHUNK (PSEUDO-DATAPOINT) %d of %d\n",chunkid, numChunks);
+				primal_obj_sum += primal_obj;
+				printf("(OnlineSVM) : Processed pseudo-datapoint -- primal objective sum: %.4f\n", primal_obj_sum);
+
+			}
+
+			printf("(OnlineSVM) : EPOCH COMPLETE -- primal objective: %.4f\n", primal_obj);
+			printf("(ONLINE LEARNING) : EPOCH %d DONE! .....\n",eid);
+
+		}
+
+		time(&time_end_full);
+		char msg[20];
+		sprintf(msg,"(ONLINE LEARNING) : Total Time Taken : ");
+		print_time(time_start_full, time_end_full, msg);
+
 
   /* write structural model */
   write_struct_model(modelfile, &sm, &sparm);
@@ -896,6 +954,10 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
 
   struct_parm->custom_argc=0;
 
+  // Ajay
+  learn_parm->totalEpochs = 1;
+  learn_parm->numChunks = 50;
+
   for(i=1;(i<argc) && ((argv[i])[0] == '-');i++) {
     switch ((argv[i])[1]) {
     case 'c': i++; learn_parm->svm_c=atof(argv[i]); break;
@@ -916,6 +978,9 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'o': i++; learn_parm->rho_admm=atof(argv[i]); printf("Rho is %g\n", learn_parm->rho_admm); break;
     case 'a': i++; learn_parm->isExhaustive=atol(argv[i]);printf("isExhaustive is %ld",learn_parm->isExhaustive); break;
     case 'b': i++; learn_parm->isLPrelaxation=atol(argv[i]);printf("isLPrelaxation is %ld",learn_parm->isLPrelaxation); break;
+    case 'K': i++; learn_parm->numChunks=atoi(argv[i]); break;
+    case 'E': i++; learn_parm->totalEpochs=atoi(argv[i]); break;
+
     case 'C': i++; learn_parm->Cdash=atof(argv[i]); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);

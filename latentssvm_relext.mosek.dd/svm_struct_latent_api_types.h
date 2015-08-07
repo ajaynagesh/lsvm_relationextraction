@@ -58,6 +58,10 @@ typedef struct structmodel {
   long   sizePsi;     /* maximum number of weights in w */
   /* other information that is needed for the stuctural model can be
      added here, e.g. the grammar rules for NLP parsing */
+
+  // Ajay: Online model
+  double ***w_iters;
+
 } STRUCTMODEL;
 
 

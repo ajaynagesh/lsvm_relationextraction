@@ -5,6 +5,7 @@
 #include "svm_struct_latent_api_types.h"
 
 SAMPLE read_struct_examples(char *file, STRUCT_LEARN_PARM *sparm);
+SAMPLE read_struct_examples_chunk(char *file);
 void init_struct_model(SAMPLE sample, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, LEARN_PARM *lparm, KERNEL_PARM *kparm);
 void init_latent_variables(SAMPLE *sample, LEARN_PARM *lparm, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm);
 SVECTOR *psi(PATTERN x, LABEL y, LATENT_VAR h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm);

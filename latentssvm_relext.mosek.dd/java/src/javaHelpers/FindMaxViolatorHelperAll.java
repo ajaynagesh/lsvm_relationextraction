@@ -155,8 +155,8 @@ public class FindMaxViolatorHelperAll {
 		double simFracParam = Double.parseDouble(args[2]);
 		String datasetStatsFile = args[3];
 		double rho;
-		long datasetStartIdx = Long.parseLong(args[8]);
-		long chunkSz = Long.parseLong(args[9]);
+		int datasetStartIdx = Integer.parseInt(args[8]);
+		int chunkSz = Integer.parseInt(args[9]);
 		LabelWeights [] zWeights = Utils.initializeLabelWeights(currentParametersFile);
 		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile, datasetStartIdx, chunkSz);
 		

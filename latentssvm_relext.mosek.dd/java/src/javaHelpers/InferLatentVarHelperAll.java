@@ -288,8 +288,8 @@ public class InferLatentVarHelperAll {
 		long start = System.currentTimeMillis();
 
 		LabelWeights [] zWeights = initializeLabelWeights(currentParametersFile);
-		long datasetStartIdx = Long.parseLong(args[2]);
-		long chunkSz = Long.parseLong(args[3]);
+		int datasetStartIdx = Integer.parseInt(args[2]);
+		int chunkSz = Integer.parseInt(args[3]);
 		ArrayList<DataItem> dataset = Utils.populateDataset(datasetFile, datasetStartIdx, chunkSz);
 		
 		long curtime= System.currentTimeMillis();
