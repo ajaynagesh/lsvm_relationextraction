@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
   /* read model file */
   printf("Reading model..."); fflush(stdout);
-  model = read_struct_model(modelfile, &sparm);
+//  model = read_struct_model(modelfile, &sparm);
   printf("done.\n"); 
 
   /* read test examples */

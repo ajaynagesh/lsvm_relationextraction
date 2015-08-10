@@ -565,7 +565,8 @@ int main(int argc, char* argv[]) {
 
   w = create_nvector(sm.sizePsi);
   clear_nvector(w, sm.sizePsi);
-  sm.w = w; /* establish link to w, as long as w does not change pointer */
+  // Online SVM: Note --- no longer using this code hence replace w by w_iters[0][0]
+   sm.w_iters[0][0] = w; /* establish link to w, as long as w does not change pointer */
 
   // Testing: infer_latent_variables(ex[0].x, ex[0].y ,&sm, &sparm);
   // exit(0);

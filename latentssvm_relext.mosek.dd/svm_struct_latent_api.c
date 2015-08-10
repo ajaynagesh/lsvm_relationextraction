@@ -275,6 +275,10 @@ void init_struct_model(SAMPLE sample, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
 	sm->sizePsi = sparm->max_feature_key * (sparm->total_number_rels + 1);
 	printf("Max feature index %ld\n", sparm->max_feature_key);
 	printf("Size of w vector %ld\n",sm->sizePsi);
+
+	printf("Number of epochs (OnlineSVM Learning) : %d\n", lparm->totalEpochs);
+	printf("Number of chunks (OnlineSVM Learning) : %d\n", lparm->numChunks);
+
 }
 
 /* void init_latent_variables(SAMPLE *sample, LEARN_PARM *lparm, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm) {
@@ -423,7 +427,8 @@ void classify_struct_example(PATTERN x, LABEL *y, LATENT_VAR *h, STRUCTMODEL *sm
 
 		// 1. Write input to a file
 		char *filename = "tmpfiles/classify_ex";
-		write_to_file(x, y, sm->w, sparm->max_feature_key, sparm->total_number_rels, filename);
+		// Online SVM: Note --- no longer using this code hence replace w by w_iters[0][0]
+		write_to_file(x, y, sm->w_iters[0][0], sparm->max_feature_key, sparm->total_number_rels, filename);
 
 		// 2. Call the ClassifyStructEgHelper method from JAVA
 		system("export LD_LIBRARY_PATH=/usr/lib/lp_solve && java -cp java/bin:java/lib/* javaHelpers.ClassifyStructEgHelper tmpfiles/classify_ex");
@@ -538,14 +543,149 @@ void write_to_file_params_t(double *w, long num_of_features, long total_number_r
 
 }
 
-void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Fweight, long datasetStartIdx, long chunkSz){
+void write_to_file_params_t_augmented(double *w, long num_of_features, long total_number_rels, char *filename){
+
+	FILE *fp = fopen(filename,"w");
+	if (fp==NULL) {
+		printf("Cannot open output file %s!\n", filename);
+		exit(1);
+	}
+
+	//Write the w. One line for each label.
+	fprintf(fp,"%ld\n",total_number_rels);
+	fprintf(fp,"%ld\n",num_of_features);
+	long rel_id;
+	for(rel_id = 0; rel_id <= total_number_rels; rel_id++){ // Include the nil label id
+		long f_id;
+		for(f_id = 1; f_id <= num_of_features; f_id ++){ // Feature ids start from 1 and go upto num_of_features .. hence this
+			long key = (rel_id * num_of_features) + f_id;
+			fprintf(fp, "%.16g ",w[key]); // IMPT: SHOULD NOT ADD 'wprev'. Should pass 'u' as it it to the max_violator function
+		}
+		fprintf(fp, "\n");
+	}
+
+	fclose(fp);
+
+
+}
+
+void find_most_violated_constraint_marginrescaling_all_online(LABEL *ybar_all, LATENT_VAR *hbar_all,
+		STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile,
+		double frac_sim, char *dataset_stats_file, double rho_admm,	long isExhaustive,
+		long isLPrelaxation, double Fweight, int datasetStartIdx, int chunkSz,
+		int eid, int chunkid){
 
 	// 1. Write input to a file
 	char *filename = (char*) malloc(100);
 	strcpy(filename, tmpdir);
 	strcat(filename, "max_violator_all");
 
-	write_to_file_params_t(sm->w, sparm->max_feature_key, sparm->total_number_rels, filename);
+	write_to_file_params_t_augmented(sm->w_iters[eid][chunkid], sparm->max_feature_key, sparm->total_number_rels, filename);
+
+	// 2. Call the FindMaxViolatorHelperAll method from JAVA
+//	char * cmd = "export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
+//			" java -Xmx8G -cp java/bin:java/lib/* "
+//			" -Djava.library.path=/opt/ibm/ILOG/CPLEX_Studio124/cplex/bin/x86-64_sles10_4.1/:/usr/lib/lp_solve "
+//			" javaHelpers.FindMaxViolatorHelperAll "
+//			" tmpfiles/max_violator_all dataset/reidel_trainSVM.data 0.9 ";
+
+	char *cmd = malloc(1000);
+	// ON MONASH ....
+//        strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && "
+//           " java -Xmx8G -cp java/bin:java/lib/* "
+//	   " -Djava.library.path=../../libs/x86-64_sles10_4.1/:../../libs/lp_solve "
+//	   " javaHelpers.FindMaxViolatorHelperAll ");
+
+	// LOCAL PATH
+	strcpy(cmd, //"export LD_LIBRARY_PATH=~/Research/software/lp_solve/ && "
+			" java -Xmx2G -cp java/bin:java/lib/* "
+			//" -Djava.library.path=~/Research/software/x86-64_sles10_4.1/:~/Research/software/lp_solve/ "
+			" javaHelpers.FindMaxViolatorHelperAll ");
+	strcat(cmd,filename);
+	strcat(cmd, " ");
+	strcat(cmd, trainfile);
+	strcat(cmd, " ");
+	char double_str[5]; sprintf(double_str,"%g", frac_sim);
+	strcat(cmd, double_str);
+	strcat(cmd, " ");
+	strcat(cmd, dataset_stats_file);
+	strcat(cmd, " ");
+	char rho_str[5]; sprintf(rho_str,"%g", rho_admm);
+	strcat(cmd, rho_str);
+	strcat(cmd, " ");
+	char isExhaustive_str[5]; sprintf(isExhaustive_str,"%ld", isExhaustive);
+	strcat(cmd, isExhaustive_str);
+	strcat(cmd, " ");
+	char isLPrelaxation_str[5]; sprintf(isLPrelaxation_str,"%ld", isLPrelaxation);
+	strcat(cmd, isLPrelaxation_str);
+	strcat(cmd, " ");
+	char Fweight_str[10]; sprintf(Fweight_str, "%g", Fweight);
+	strcat(cmd, Fweight_str);
+	strcat(cmd, " ");
+	char datasetStartIdxStr[5]; sprintf(datasetStartIdxStr,"%d", datasetStartIdx);
+	strcat(cmd, datasetStartIdxStr);
+	strcat(cmd, " ");
+	char chunkSzStr[5]; sprintf(chunkSzStr, "%d", numEgs);
+	strcat(cmd, chunkSzStr);
+
+	printf("Executing cmd (onlineSVM) : %s\n", cmd);fflush(stdout);
+	system(cmd);
+
+
+	// 3. Read the values of ybar_all and hbar_all from the file tmpfiles/max_violator_all.result
+//	char *filename_res = "tmpfiles/max_violator_all.result";
+	char *filename_res = (char*) malloc(100);
+	strcpy(filename_res, tmpdir);
+	strcat(filename_res, "max_violator_all.result");
+
+	FILE *fp = fopen(filename_res,"r");
+	if (fp==NULL) {
+		printf("Cannot open output file %s!\n", filename_res);
+		exit(1);
+	}
+	int j;
+	for(j = 0; j < numEgs; j ++){
+
+		int num_ylabels;
+		fscanf(fp,"%d\n",&num_ylabels);
+		ybar_all[j].num_relations = num_ylabels;
+
+		int i;
+		ybar_all[j].relations = (int*)malloc(sizeof(int)*num_ylabels);
+		for(i = 0; i < num_ylabels; i ++){
+			int ylabel;
+			fscanf(fp, "%d\n",&ylabel);
+			ybar_all[j].relations[i] = ylabel;
+		}
+
+		int num_hlabels;
+		fscanf(fp, "%d\n", &num_hlabels);
+		hbar_all[j].num_mentions = num_hlabels;
+
+		hbar_all[j].mention_labels = (int*)malloc(sizeof(int)*num_hlabels);
+		for(i = 0; i < num_hlabels; i ++){
+			int hlabel;
+			fscanf(fp, "%d\n", &hlabel);
+			hbar_all[j].mention_labels[i] = hlabel;
+		}
+	}
+
+	free(filename);
+	free(filename_res);
+	free(cmd);
+	fclose(fp);
+}
+
+
+void find_most_violated_constraint_marginrescaling_all(LABEL *ybar_all, LATENT_VAR *hbar_all, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char *tmpdir, char *trainfile, double frac_sim, char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Fweight, int datasetStartIdx, int chunkSz){
+
+	// 1. Write input to a file
+	char *filename = (char*) malloc(100);
+	strcpy(filename, tmpdir);
+	strcat(filename, "max_violator_all");
+
+	// Online SVM: Note --- no longer using this code hence replace w by w_iters[0][0]
+	write_to_file_params_t(sm->w_iters[0][0], sparm->max_feature_key, sparm->total_number_rels, filename);
 
 	// 2. Call the FindMaxViolatorHelperAll method from JAVA
 //	char * cmd = "export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
@@ -645,7 +785,8 @@ void find_most_violated_constraint_marginrescaling(PATTERN x, LABEL y, LABEL *yb
 
 	// 1. Write input to a file
 	char *filename = "tmpfiles/max_violator";
-	write_to_file(x, y, sm->w, sparm->max_feature_key, sparm->total_number_rels, filename);
+	// Online SVM: Note --- no longer using this code hence replace w by w_iters[0][0]
+	write_to_file(x, y, sm->w_iters[0][0], sparm->max_feature_key, sparm->total_number_rels, filename);
 
 	// 2. Call the FindMaxViolatorHelper method from JAVA
 	system("export LD_LIBRARY_PATH=/usr/lib/lp_solve && java -Xmx1G -cp java/bin:java/lib/* javaHelpers.FindMaxViolatorHelper tmpfiles/max_violator");
@@ -690,7 +831,8 @@ void find_most_violated_constraint_marginrescaling(PATTERN x, LABEL y, LABEL *yb
 
 }
 
-void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int numEgs, char* tmpdir, char *trainfile, long datasetStartIdx, long chunkSz){
+void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
+		int numEgs, char* tmpdir, char *trainfile, int datasetStartIdx, int chunkSz, int eid, int chunkid){
 
 	// 1. Write input to a file
 	//char *filename = "tmpfiles/inf_lat_var_all";
@@ -698,7 +840,9 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	strcpy(filename, tmpdir);
 	strcat(filename,"inf_lat_var_all");
 
-	write_to_file_params_t(sm->w, sparm->max_feature_key, sparm->total_number_rels, filename);
+	printf("(onlinesvm) Before writing params to file "); fflush(stdout);
+	write_to_file_params_t(sm->w_iters[eid][chunkid], sparm->max_feature_key, sparm->total_number_rels, filename);
+	printf("(onlinesvm) After writing params to file "); fflush(stdout);
 
 	// 2. Call the InferLatentVarHelperAll method from JAVA
 	// TODO: Modifiy the cmds appropriately
@@ -723,7 +867,7 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 	strcat(cmd, " ");
 
 		//printf("Running : %s\n", command);
-	printf("Executing cmd : %s\n", cmd);fflush(stdout);
+	printf("Executing cmd (online SVM): %s\n", cmd);fflush(stdout);
 	system(cmd);
 
 	// 3. Read the values of ybar_all and hbar_all from the file tmpfiles/max_violator_all.result
@@ -769,7 +913,8 @@ LATENT_VAR infer_latent_variables(PATTERN x, LABEL y, STRUCTMODEL *sm, STRUCT_LE
 
   // 1. Write input to a file
   char *filename = "tmpfiles/inf_lat_var";
-  write_to_file(x, y, sm->w, sparm->max_feature_key, sparm->total_number_rels, filename);
+  // Online SVM: Note --- no longer using this code hence replace w by w_iters[0][0]
+  write_to_file(x, y, sm->w_iters[0][0], sparm->max_feature_key, sparm->total_number_rels, filename);
 
   // 2. CALL the method InferLatentVarHelper FROM JAVA
   //printf("export LD_LIBRARY_PATH=/usr/lib/lp_solve && java -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelper tmpfiles/inf_lat_var \n");
@@ -928,6 +1073,54 @@ double loss(LABEL y, LABEL ybar, LATENT_VAR hbar, STRUCT_LEARN_PARM *sparm) {
 //  return(ans);
 //}
 
+void write_to_file_params_t_online(double ***w_iters, int totalEpochs, int numChunks, long num_of_features, long total_number_rels, char *filename){
+
+	FILE *fp = fopen(filename,"w");
+	if (fp==NULL) {
+		printf("Cannot open output file %s!\n", filename);
+		exit(1);
+	}
+
+	fprintf(fp,"%d\n", totalEpochs);
+	fprintf(fp,"%d\n", numChunks);
+
+	//Write the w. One line for each label.
+	fprintf(fp,"%ld\n",total_number_rels);
+	fprintf(fp,"%ld\n",num_of_features);
+	long rel_id;
+	int eid, chunkid;
+	fprintf(fp, "==\n");
+	for(eid = 0; eid < totalEpochs; eid++){
+		for(chunkid = 0; chunkid < numChunks; chunkid++){
+
+			double *w = w_iters[eid][chunkid];
+
+			for(rel_id = 0; rel_id <= total_number_rels; rel_id++){ // Include the nil label id
+				long f_id;
+				for(f_id = 1; f_id <= num_of_features; f_id ++){ // Feature ids start from 1 and go upto num_of_features .. hence this
+					long key = (rel_id * num_of_features) + f_id;
+					fprintf(fp, "%.16g ",w[key]);
+				}
+				fprintf(fp, "\n");
+			}
+			fprintf(fp, "--\n");
+		}
+
+		fprintf(fp, "==\n");
+	}
+
+	fclose(fp);
+
+
+}
+
+void write_struct_model_online(char *file, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, int totalEpochs, int numChunks) {
+/*
+  Writes the learned weight vector sm->w_iters to file after training.
+*/
+	write_to_file_params_t_online(sm->w_iters, totalEpochs, numChunks, sparm->max_feature_key, sparm->total_number_rels, file);
+}
+
 void write_struct_model(char *file, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm) {
 /*
   Writes the learned weight vector sm->w to file after training. 
@@ -947,53 +1140,54 @@ void write_struct_model(char *file, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm) {
 	  }
 	  fclose(modelfl);
  */
-	write_to_file_params_t(sm->w, sparm->max_feature_key, sparm->total_number_rels, file);
+	// Online SVM: Note --- no longer using this code hence replace w by w_iters[0][0]
+	write_to_file_params_t(sm->w_iters[0][0], sparm->max_feature_key, sparm->total_number_rels, file);
 }
 
-STRUCTMODEL read_struct_model(char *file, STRUCT_LEARN_PARM *sparm) {
-/*
-  Reads in the learned model parameters from file into STRUCTMODEL sm.
-  The input file format has to agree with the format in write_struct_model().
-*/
-
-	STRUCTMODEL sm;
-	FILE *modelfl;
-	long sizePsi, i, fnum;
-	double fweight;
-
-	modelfl = fopen(file,"r");
-	if (modelfl==NULL) {
-		printf("Cannot open model file %s for input!", file);
-		exit(1);
-	}
-
-	if (fscanf(modelfl, "# sizePsi:%ld", &sizePsi)!=1) {
-		printf("Incorrect model file format for %s!\n", file);
-		fflush(stdout);
-	}
-
-	sm.sizePsi = sizePsi;
-	sm.w = (double*)malloc(sizeof(double)*(sizePsi+1));
-	for (i=0;i<sizePsi+1;i++) {
-		sm.w[i] = 0.0;
-	}
-
-	while (!feof(modelfl)) {
-		fscanf(modelfl, "%ld:%lf", &fnum, &fweight);
-		sm.w[fnum] = fweight;
-	}
-	fclose(modelfl);
-
-	return(sm);
-
-}
+//STRUCTMODEL read_struct_model(char *file, STRUCT_LEARN_PARM *sparm) {
+///*
+//  Reads in the learned model parameters from file into STRUCTMODEL sm.
+//  The input file format has to agree with the format in write_struct_model().
+//*/
+//
+//	STRUCTMODEL sm;
+//	FILE *modelfl;
+//	long sizePsi, i, fnum;
+//	double fweight;
+//
+//	modelfl = fopen(file,"r");
+//	if (modelfl==NULL) {
+//		printf("Cannot open model file %s for input!", file);
+//		exit(1);
+//	}
+//
+//	if (fscanf(modelfl, "# sizePsi:%ld", &sizePsi)!=1) {
+//		printf("Incorrect model file format for %s!\n", file);
+//		fflush(stdout);
+//	}
+//
+//	sm.sizePsi = sizePsi;
+//	sm.w = (double*)malloc(sizeof(double)*(sizePsi+1));
+//	for (i=0;i<sizePsi+1;i++) {
+//		sm.w[i] = 0.0;
+//	}
+//
+//	while (!feof(modelfl)) {
+//		fscanf(modelfl, "%ld:%lf", &fnum, &fweight);
+//		sm.w[fnum] = fweight;
+//	}
+//	fclose(modelfl);
+//
+//	return(sm);
+//
+//}
 
 void free_struct_model(STRUCTMODEL sm, STRUCT_LEARN_PARM *sparm) {
 /*
   Free any memory malloc'ed in STRUCTMODEL sm after training. 
 */
-  
-  free(sm.w);
+	// OnlineSVM .. no longer used .. so using w_iters[0][0] arbitrarily
+	  free(sm.w_iters[0][0]);
 }
 
 void free_pattern(PATTERN x) {

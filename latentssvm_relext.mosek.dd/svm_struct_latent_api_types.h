@@ -53,14 +53,14 @@ typedef struct sample {
 
 
 typedef struct structmodel {
-  double *w;          /* pointer to the learned weights */
+//  double *w;          /* pointer to the learned weights */
   MODEL  *svm_model;  /* the learned SVM model */
   long   sizePsi;     /* maximum number of weights in w */
   /* other information that is needed for the stuctural model can be
      added here, e.g. the grammar rules for NLP parsing */
 
   // Ajay: Online model
-  double ***w_iters;
+  double ***w_iters; /* pointer to the learned weights across epochs and chunks*/
 
 } STRUCTMODEL;
 
