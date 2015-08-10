@@ -591,16 +591,16 @@ void find_most_violated_constraint_marginrescaling_all_online(LABEL *ybar_all, L
 
 	char *cmd = malloc(1000);
 	// ON MONASH ....
-//        strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && "
-//           " java -Xmx8G -cp java/bin:java/lib/* "
-//	   " -Djava.library.path=../../libs/x86-64_sles10_4.1/:../../libs/lp_solve "
-//	   " javaHelpers.FindMaxViolatorHelperAll ");
+        strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ && "
+           " java -Xmx8G -cp java/bin:java/lib/* "
+	   " -Djava.library.path=../../libs/x86-64_sles10_4.1/:../../libs/lp_solve "
+	   " javaHelpers.FindMaxViolatorHelperAll ");
 
 	// LOCAL PATH
-	strcpy(cmd, //"export LD_LIBRARY_PATH=~/Research/software/lp_solve/ && "
-			" java -Xmx2G -cp java/bin:java/lib/* "
-			//" -Djava.library.path=~/Research/software/x86-64_sles10_4.1/:~/Research/software/lp_solve/ "
-			" javaHelpers.FindMaxViolatorHelperAll ");
+//	strcpy(cmd, //"export LD_LIBRARY_PATH=~/Research/software/lp_solve/ && "
+//			" java -Xmx2G -cp java/bin:java/lib/* "
+//			//" -Djava.library.path=~/Research/software/x86-64_sles10_4.1/:~/Research/software/lp_solve/ "
+//			" javaHelpers.FindMaxViolatorHelperAll ");
 	strcat(cmd,filename);
 	strcat(cmd, " ");
 	strcat(cmd, trainfile);
@@ -850,10 +850,16 @@ void infer_latent_variables_all(LATENT_VAR *imputed_h, STRUCTMODEL *sm, STRUCT_L
 //			" java -Xmx8G -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelperAll "
 //			" tmpfiles/inf_lat_var_all dataset/reidel_trainSVM.data ";
 	char *cmd = malloc(1000);
-	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
-			"java -Xmx8G -cp java/bin:java/lib/*  "
-			"-Djava.library.path='/home/ajay/Research/software/lp_solve/:/home/ajay/Research/software/mosek.5/5/tools/platform/linux64x86/bin/:/home/ajay/Research/software/x86-64_sles10_4.1/' "
-			"javaHelpers.InferLatentVarHelperAll ");
+	// LOCAL COPY
+//	strcpy(cmd,"export LD_LIBRARY_PATH=/usr/lib/lp_solve && "
+//			"java -Xmx8G -cp java/bin:java/lib/*  "
+//			"-Djava.library.path='/home/ajay/Research/software/lp_solve/:/home/ajay/Research/software/mosek.5/5/tools/platform/linux64x86/bin/:/home/ajay/Research/software/x86-64_sles10_4.1/' "
+//			"javaHelpers.InferLatentVarHelperAll ");
+
+	// ON MONASH ....
+	strcpy(cmd,"export LD_LIBRARY_PATH=~/lsvm_code/libs/lp_solve/:~/lsvm_code/libs/mosek.5/5/tools/platform/linux64x86/bin/ "
+			"&& java -Xmx8G -cp java/bin:java/lib/* javaHelpers.InferLatentVarHelperAll ");
+
 	strcat(cmd,filename);
 	//strcat(command," dataset/reidel_trainSVM.data");
 	strcat(cmd, " ");
