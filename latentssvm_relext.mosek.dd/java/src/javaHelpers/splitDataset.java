@@ -76,7 +76,7 @@ public class splitDataset {
 			
 			// Compute the start index and the chunkSz
 			int datasetStartIdx = (chunkid) * sz;
-			int chunkSz = (numChunks == chunkid-1) ? 
+			int chunkSz = (numChunks-1 == chunkid) ? 
 					(dataset.size() - ((numChunks-1)*sz) )  : 
 					(sz); 
 			
