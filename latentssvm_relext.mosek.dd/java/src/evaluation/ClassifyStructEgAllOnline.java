@@ -360,7 +360,7 @@ public class ClassifyStructEgAllOnline {
 
 		BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
 		
-		ArrayList<ArrayList<LabelWeights []>> WtsAllEpochsAllChunks = new ArrayList<>();
+		ArrayList<ArrayList<LabelWeights []>> WtsAllEpochsAllChunks = new ArrayList<ArrayList<LabelWeights []>>();
 		
 		totalEpochs = Integer.parseInt(br.readLine());
 		numChunks = Integer.parseInt(br.readLine());
@@ -370,13 +370,13 @@ public class ClassifyStructEgAllOnline {
 		
 		br.readLine(); // To read the '==' separator
 		
+		LabelWeights [] zWeights = new LabelWeights[numRelations];
+	    for(int i = 0; i < zWeights.length; i ++)
+		      zWeights[i] = new LabelWeights(numSentenceFeatures);
+		
 		for(int eid = 0; eid < totalEpochs; eid ++) {
-			ArrayList<LabelWeights[]> wtsChunk = new ArrayList<>();
+			ArrayList<LabelWeights[]> wtsChunk = new ArrayList<LabelWeights[]>();
 			for(int chunkid = 0; chunkid < numChunks; chunkid ++) {
-
-				LabelWeights [] zWeights = new LabelWeights[numRelations];
-			    for(int i = 0; i < zWeights.length; i ++)
-				      zWeights[i] = new LabelWeights(numSentenceFeatures);
 			    
 			    for(int i = 0; i < numRelations; i ++){
 			    	String line  = br.readLine();
