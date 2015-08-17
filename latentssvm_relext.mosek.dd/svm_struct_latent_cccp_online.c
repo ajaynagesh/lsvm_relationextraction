@@ -249,7 +249,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 		  datasetStartIdx, chunkSz, eid, chunkid);
   value = margin2 - sprod_ns(w, new_constraint);
 
-  value -= sprod_ns(w_prev, new_constraint); //(Ajay: ONLINE LEARNING) IMPT NOTE --> constant addition to the loss ..
+  margin -= sprod_ns(w_prev, new_constraint); //(Ajay: ONLINE LEARNING) IMPT NOTE --> constant addition to the loss ..
   	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 	
   primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
@@ -395,6 +395,9 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 		  &margin2, datasetStartIdx, chunkSz, eid, chunkid);
  //   new_constraint = find_cutting_plane(ex, fycache, &margin, m, sm, sparm, tmpdir, trainfile, frac_sim, Fweight, dataset_stats_file, rho);
     value = margin2 - sprod_ns(w, new_constraint);
+
+    margin -= sprod_ns(w_prev, new_constraint); //(Ajay: ONLINE LEARNING) IMPT NOTE --> constant addition to the loss ..
+    	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 
     /* print primal objective */
     primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
@@ -689,6 +692,58 @@ SAMPLE * split_data(SAMPLE *sample, int numChunks, int randomize){
 	return chunks;
 }
 
+void create_u_variables(double ***w_iters, int eid, int chunkid, int numChunks, STRUCTMODEL *sm, double *zeroes){
+
+	int i;
+	  // -------------------------------------------------------------------------------------------
+	  /**
+	   * (Online Learning): Create new variable u = w - w^(i-1)
+	   */
+		if(chunkid == 0 && eid == 0){	// First Chunk of First Epoch
+			  for(i = 0; i < sm->sizePsi+1; i++){
+				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] - zeroes[i];
+			  }
+		}
+		else if(chunkid == 0){ 			// First chunk of the new Epoch
+			  for(i = 0; i < sm->sizePsi+1; i++){
+				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] - w_iters[eid-1][numChunks-1][i];
+			  }
+		}
+		else {
+			  for(i = 0; i < sm->sizePsi+1; i++){
+				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] - w_iters[eid][chunkid-1][i];
+			  }
+		}
+	  // -------------------------------------------------------------------------------------------
+
+}
+
+void restore_w_variables(double ***w_iters, int eid, int chunkid, int numChunks, STRUCTMODEL *sm, double *zeroes){
+	int i;
+	  // -------------------------------------------------------------------------------------------
+	  /**
+	   * (Online Learning): 'Re-add' the w^(i) variables to 'u',
+	   * output from the cutting plane algorithm code from the previous iteration,
+	   * to actually compute 'w'
+	   */
+		if(chunkid == 0 && eid == 0){	// First Chunk of First Epoch
+			  for(i = 0; i < sm->sizePsi+1; i++){
+				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] + zeroes[i];
+			  }
+		}
+		else if(chunkid == 0){ 			// First chunk of the new Epoch
+			  for(i = 0; i < sm->sizePsi+1; i++){
+				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] + w_iters[eid-1][numChunks-1][i];
+			  }
+		}
+		else {
+			  for(i = 0; i < sm->sizePsi+1; i++){
+				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] + w_iters[eid][chunkid-1][i];
+			  }
+		}
+	  // -------------------------------------------------------------------------------------------
+}
+
 double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int chunkSz, STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm,
 		double C, double Cdash, double epsilon, int MAX_ITER, LEARN_PARM *learn_parm, char *trainfile,
 		double ***w_iters, int eid, int chunkid, int numChunks, double *zeroes){
@@ -725,28 +780,6 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 	/* time taken stats */
 	time(&time_start);
 
-	  // -------------------------------------------------------------------------------------------
-	  /**
-	   * (Online Learning): Create new variable u = w - w^(i-1)
-	   */
-		if(chunkid == 0 && eid == 0){	// First Chunk of First Epoch
-			  for(i = 0; i < sm->sizePsi+1; i++){
-				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] - zeroes[i];
-			  }
-		}
-		else if(chunkid == 0){ 			// First chunk of the new Epoch
-			  for(i = 0; i < sm->sizePsi+1; i++){
-				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] - w_iters[eid-1][numChunks-1][i];
-			  }
-		}
-		else {
-			  for(i = 0; i < sm->sizePsi+1; i++){
-				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] - w_iters[eid][chunkid-1][i];
-			  }
-		}
-	  // -------------------------------------------------------------------------------------------
-
-
 	/* outer loop: latent variable imputation */
 	int outer_iter = 0;
 	last_primal_obj = 0;
@@ -757,6 +790,10 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 		/* cutting plane algorithm */
 		time_t cp_start, cp_end;
 		time(&cp_start);
+
+		/// NOTE : Change of variables (Create 'u' by subtracting w_prev from w)
+		create_u_variables(w_iters, eid, chunkid, numChunks, sm, zeroes);
+
 		if(chunkid == 0 && eid == 0){ // First Chunk of First Epoch
 			primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], dataset_sz, MAX_ITER, C, cooling_eps,
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
@@ -825,6 +862,10 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 		}
 		printf("(OnlineSVM) .. finished outer_iter %d\n",outer_iter);
 		outer_iter++;
+
+		/// NOTE: Restore the 'w' by adding the current 'u' to w_prev
+		restore_w_variables(w_iters, eid, chunkid, numChunks, sm, zeroes);
+
 	} // end outer loop
 
 	time(&time_end);
@@ -837,30 +878,6 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 		free_svector(fycache[i]);
 	}
 	free(fycache);
-
-	  // -------------------------------------------------------------------------------------------
-	  /**
-	   * (Online Learning): 'Re-add' the w^(i) variables to 'u',
-	   * output from the cutting plane algorithm code from the previous iteration,
-	   * to actually compute 'w'
-	   */
-		if(chunkid == 0 && eid == 0){	// First Chunk of First Epoch
-			  for(i = 0; i < sm->sizePsi+1; i++){
-				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] + zeroes[i];
-			  }
-		}
-		else if(chunkid == 0){ 			// First chunk of the new Epoch
-			  for(i = 0; i < sm->sizePsi+1; i++){
-				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] + w_iters[eid-1][numChunks-1][i];
-			  }
-		}
-		else {
-			  for(i = 0; i < sm->sizePsi+1; i++){
-				  w_iters[eid][chunkid][i] = w_iters[eid][chunkid][i] + w_iters[eid][chunkid-1][i];
-			  }
-		}
-	  // -------------------------------------------------------------------------------------------
-
 
 	return primal_obj;
 }
