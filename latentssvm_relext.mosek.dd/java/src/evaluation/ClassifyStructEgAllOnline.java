@@ -208,7 +208,7 @@ public class ClassifyStructEgAllOnline {
 		
 		for(int eid = 0; eid < totalEpochs; eid++){
 			for(int chunkid = 0; chunkid < numChunks; chunkid++){
-				zWeights = zWeightsAll.get(eid).get(chunkid);
+//				zWeights = zWeightsAll.get(eid).get(chunkid);
 				
 				for(int i = 0; i < numRelations; i ++){
 			    	for(int j = 0; j < numSentenceFeatures; j++ ){
