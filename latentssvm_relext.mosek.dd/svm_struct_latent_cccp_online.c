@@ -177,7 +177,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex,
 		STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight,
 		char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash, int datasetStartIdx, int chunkSz,
-		int eid, int chunkid, double *w_prev) {
+		int eid, int chunkid, double *w_prev, int numChunks) {
 //	  printf("Addr. of w (inside cp_algo) %x\t%x\n",w,sm->w);
   long i,j;
   double xi;
@@ -252,8 +252,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   margin -= sprod_ns(w_prev, new_constraint); //(Ajay: ONLINE LEARNING) IMPT NOTE --> constant addition to the loss ..
   	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 	
-  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss
-  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss
+  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
   primal_lower_bound = 0;
   expected_descent = -primal_obj_b;
   initial_primal_obj = primal_obj_b; 
@@ -400,7 +400,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 
     /* print primal objective */
-    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
      
 #if (DEBUG_LEVEL>0)
     printf("ITER PRIMAL_OBJ %.4f\n", primal_obj); fflush(stdout);
@@ -799,21 +799,21 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
 							learn_parm->Fweight, learn_parm->dataset_stats_file, learn_parm->rho_admm,
 							learn_parm->isExhaustive, learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz,
-							eid, chunkid, zeroes); // pass the zeroes vector
+							eid, chunkid, zeroes, numChunks); // pass the zeroes vector
 		}
 		else if(chunkid == 0){ // First chunk of the new Epoch
 			primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], dataset_sz, MAX_ITER, C, cooling_eps,
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
 							learn_parm->Fweight, learn_parm->dataset_stats_file, learn_parm->rho_admm,
 							learn_parm->isExhaustive, learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz,
-							eid, chunkid, w_iters[eid-1][numChunks-1]); // Last chunk of previous epoch
+							eid, chunkid, w_iters[eid-1][numChunks-1], numChunks); // Last chunk of previous epoch
 		}
 		else {
 			primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], dataset_sz, MAX_ITER, C, cooling_eps,
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
 							learn_parm->Fweight, learn_parm->dataset_stats_file, learn_parm->rho_admm,
 							learn_parm->isExhaustive, learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz,
-							eid, chunkid, w_iters[eid][chunkid-1]); // previous chunk id of current epoch
+							eid, chunkid, w_iters[eid][chunkid-1], numChunks); // previous chunk id of current epoch
 		}
 
 		time(&cp_end);
