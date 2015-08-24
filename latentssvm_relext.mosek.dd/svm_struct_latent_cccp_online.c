@@ -252,8 +252,8 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
   margin -= sprod_ns(w_prev, new_constraint); //(Ajay: ONLINE LEARNING) IMPT NOTE --> constant addition to the loss ..
   	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 	
-  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss
-  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
+  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss
+  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
   primal_lower_bound = 0;
   expected_descent = -primal_obj_b;
   initial_primal_obj = primal_obj_b; 
@@ -400,7 +400,7 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 
     /* print primal objective */
-    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
+    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
      
 #if (DEBUG_LEVEL>0)
     printf("ITER PRIMAL_OBJ %.4f\n", primal_obj); fflush(stdout);
