@@ -837,7 +837,7 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 				break;
 		case 4: printf("4 --> only F1 + unnormalised\n");
 				break;
-		case 5: prinff("5 --> only Hamming + unnormalised\n");
+		case 5: printf("5 --> only Hamming + unnormalised\n");
 				break;
 	}
 	printf("-----\n");
