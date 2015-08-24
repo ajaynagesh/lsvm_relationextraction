@@ -198,7 +198,7 @@ typedef struct learn_parm {
   double Cdash;
   int numChunks;
   int totalEpochs;
-
+  int lossType;
 } LEARN_PARM;
 
 typedef struct matrix {

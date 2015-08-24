@@ -177,7 +177,7 @@ SVECTOR* find_cutting_plane(EXAMPLE *ex, SVECTOR **fycache, double *margin, long
 double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double epsilon, SVECTOR **fycache, EXAMPLE *ex,
 		STRUCTMODEL *sm, STRUCT_LEARN_PARM *sparm, char *tmpdir, char * trainfile, double frac_sim, double Fweight,
 		char *dataset_stats_file, double rho_admm, long isExhaustive, long isLPrelaxation, double Cdash, int datasetStartIdx, int chunkSz,
-		int eid, int chunkid, double *w_prev, int numChunks) {
+		int eid, int chunkid, double *w_prev, int numChunks, int lossType) {
 //	  printf("Addr. of w (inside cp_algo) %x\t%x\n",w,sm->w);
   long i,j;
   double xi;
@@ -251,9 +251,40 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
 
   margin -= sprod_ns(w_prev, new_constraint); //(Ajay: ONLINE LEARNING) IMPT NOTE --> constant addition to the loss ..
   	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
-	
-  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss
-  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
+
+  // Loss types: (Note: normalisation when applied, is applied to both hamming and F1 if it is a combination loss)
+  switch(lossType){
+  	  case 0:  // 0 --> combination (Hamming + F1) + unnormalised
+  		  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+  		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+  		  	  break;
+
+  	  case 1: // 1 --> only F1 + normalised (by number of chunked datasets)
+  		  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+ Cdash*margin/numChunks;
+  		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+ Cdash*margin/numChunks;
+  		  	  break;
+
+  	  case 2: // 2 --> only Hamming + normalised (by number of chunked datasets)
+  		  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value/numChunks ;
+  		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks ;
+  		      break;
+
+      case 3: // 3 --> combination (Hamming + F1) + normalised (by number of chunked datasets)
+    	  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss
+    	  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
+  		  	  break;
+
+  	  case 4:  // 4 --> only F1 + unnormalised
+  		  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+ Cdash*margin;
+  		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+ Cdash*margin;
+  		  	  break;
+
+  	  case 5: // 5 --> only Hamming + unnormalised
+  		  primal_obj_b = 0.5*sprod_nn(w_b,w_b,sm->sizePsi)+C*value;
+  		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value;
+  		   	  break;
+  }
+
   primal_lower_bound = 0;
   expected_descent = -primal_obj_b;
   initial_primal_obj = primal_obj_b; 
@@ -400,7 +431,33 @@ double cutting_plane_algorithm(double *w, long m, int MAX_ITER, double C, double
     	  	  	  	  	  	  	  	  	  	  	  // model score using w_prev values ('-' is used because the terms are reversed in the code)
 
     /* print primal objective */
-    primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
+
+    // Loss types: (Note: normalisation when applied, is applied to both hamming and F1 if it is a combination loss)
+      switch(lossType){
+      	  case 0:  // 0 --> combination (Hamming + F1) + unnormalised
+      		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value + Cdash*margin; // Ajay: Change in obj involing both hamming and F1 loss;
+      		  	  break;
+
+      	  case 1: // 1 --> only F1 + normalised (by number of chunked datasets)
+      		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+ Cdash*margin/numChunks;
+      		  	  break;
+
+      	  case 2: // 2 --> only Hamming + normalised (by number of chunked datasets)
+      		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks ;
+      		      break;
+
+          case 3: // 3 --> combination (Hamming + F1) + normalised (by number of chunked datasets)
+        	  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value/numChunks + Cdash*margin/numChunks; // Ajay: Change in obj involing both hamming and F1 loss;
+      		  	  break;
+
+      	  case 4:  // 4 --> only F1 + unnormalised
+      		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+ Cdash*margin;
+      		  	  break;
+
+      	  case 5: // 5 --> only Hamming + unnormalised
+      		  primal_obj = 0.5*sprod_nn(w,w,sm->sizePsi)+C*value;
+      		   	  break;
+      }
      
 #if (DEBUG_LEVEL>0)
     printf("ITER PRIMAL_OBJ %.4f\n", primal_obj); fflush(stdout);
@@ -767,6 +824,24 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 	printf("sample.n: %ld\n", dataset_sz);
 	printf("sm->sizePsi: %ld\n", sm->sizePsi); fflush(stdout);
 
+	printf("Loss Type : %d\n",learn_parm->lossType);
+	printf("--\n");
+	switch(learn_parm->lossType){
+		case 0: printf("0 --> combination (Hamming + F1) + unnormalised\n");
+				break;
+		case 1: printf("1 --> only F1 + normalised (by number of chunked datasets)\n");
+				break;
+		case 2: printf("2 --> only Hamming + normalised (by number of chunked datasets)\n");
+				break;
+		case 3: printf("3 --> combination (Hamming + F1) + normalised (by number of chunked datasets)\n");
+				break;
+		case 4: printf("4 --> only F1 + unnormalised\n");
+				break;
+		case 5: prinff("5 --> only Hamming + unnormalised\n");
+				break;
+	}
+	printf("-----\n");
+
 	/* prepare feature vector cache for correct labels with imputed latent variables */
 	fycache = (SVECTOR**)malloc(dataset_sz*sizeof(SVECTOR*));
 	for (i=0;i<dataset_sz;i++) {
@@ -799,21 +874,21 @@ double optimizeMultiVariatePerfMeasure(SAMPLE sample, int datasetStartIdx, int c
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
 							learn_parm->Fweight, learn_parm->dataset_stats_file, learn_parm->rho_admm,
 							learn_parm->isExhaustive, learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz,
-							eid, chunkid, zeroes, numChunks); // pass the zeroes vector
+							eid, chunkid, zeroes, numChunks, learn_parm->lossType); // pass the zeroes vector
 		}
 		else if(chunkid == 0){ // First chunk of the new Epoch
 			primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], dataset_sz, MAX_ITER, C, cooling_eps,
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
 							learn_parm->Fweight, learn_parm->dataset_stats_file, learn_parm->rho_admm,
 							learn_parm->isExhaustive, learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz,
-							eid, chunkid, w_iters[eid-1][numChunks-1], numChunks); // Last chunk of previous epoch
+							eid, chunkid, w_iters[eid-1][numChunks-1], numChunks, learn_parm->lossType); // Last chunk of previous epoch
 		}
 		else {
 			primal_obj = cutting_plane_algorithm(w_iters[eid][chunkid], dataset_sz, MAX_ITER, C, cooling_eps,
 							fycache, ex, sm, sparm,	learn_parm->tmpdir, trainfile, learn_parm->frac_sim,
 							learn_parm->Fweight, learn_parm->dataset_stats_file, learn_parm->rho_admm,
 							learn_parm->isExhaustive, learn_parm->isLPrelaxation, Cdash, datasetStartIdx, chunkSz,
-							eid, chunkid, w_iters[eid][chunkid-1], numChunks); // previous chunk id of current epoch
+							eid, chunkid, w_iters[eid][chunkid-1], numChunks, learn_parm->lossType); // previous chunk id of current epoch
 		}
 
 		time(&cp_end);
@@ -894,7 +969,8 @@ int main(int argc, char* argv[]) {
 
   // The file to create the online version of the code
 
-  printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. with weighting of Fscores .. no regions file");
+//  printf("Runs with F1 loss in the loss-augmented objective .. only positive data .. with weighting of Fscores .. no regions file");
+  printf("Runs with loss types specified via a parameter\n");
 
 //  double *w; /* weight vector */
   double C, epsilon, Cdash;
@@ -1080,6 +1156,15 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
   learn_parm->totalEpochs = 1;
   learn_parm->numChunks = 5;
 
+  // Loss types: (Note: normalisation when applied, is applied to both hamming and F1 if it is a combination loss)
+  // 0 --> combination (Hamming + F1) + unnormalised
+  // 1 --> only F1 + normalised (by number of chunked datasets)
+  // 2 --> only Hamming + normalised (by number of chunked datasets)
+  // 3 --> combination (Hamming + F1) + normalised (by number of chunked datasets)
+  // 4 --> only F1 + unnormalised
+  // 5 --> only Hamming + unnormalised
+  learn_parm->lossType = 0;
+
   for(i=1;(i<argc) && ((argv[i])[0] == '-');i++) {
     switch ((argv[i])[1]) {
     case 'c': i++; learn_parm->svm_c=atof(argv[i]); break;
@@ -1102,8 +1187,8 @@ void my_read_input_parameters(int argc, char *argv[], char *trainfile, char* mod
     case 'b': i++; learn_parm->isLPrelaxation=atol(argv[i]);printf("isLPrelaxation is %ld",learn_parm->isLPrelaxation); break;
     case 'K': i++; learn_parm->numChunks=atoi(argv[i]); break;
     case 'E': i++; learn_parm->totalEpochs=atoi(argv[i]); break;
-
     case 'C': i++; learn_parm->Cdash=atof(argv[i]); break;
+    case 'L': i++; learn_parm->lossType=atof(argv[i]); break;
    ////////////////////////
     default: printf("\nUnrecognized option %s!\n\n",argv[i]);
       exit(0);
