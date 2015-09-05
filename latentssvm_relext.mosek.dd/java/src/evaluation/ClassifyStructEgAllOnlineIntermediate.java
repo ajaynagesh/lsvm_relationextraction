@@ -204,7 +204,28 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		double weight = Double.parseDouble(args[3]);
 		
 		ArrayList<ArrayList<LabelWeights []>> zWeightsAll = initializeLabelWeightsOnline(parametersFile);
-				
+		
+		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(parametersFile+".redump")));
+		bw.write(totalEpochs+"\n");
+		bw.write(numChunks+"\n");
+		bw.write(numRelations+"\n");
+		bw.write(numSentenceFeatures+"\n");
+		bw.write("==\n");
+		for (int eid = 0; eid < totalEpochs; eid++){
+			for(int chunkid = 0; chunkid < numChunks; chunkid++){
+				for(int i = 0; i < numRelations; i ++){
+					for(int j = 0; j < numSentenceFeatures; j++ ){
+						bw.write(zWeightsAll.get(eid).get(chunkid)[i].weights[j]+" ");
+					}
+					
+				}
+				bw.write("--\n");
+			}
+			bw.write("==\n");
+		}
+		bw.close();
+		System.exit(0);
+		
 		ArrayList<DataItem> dataset = populateDataset(datasetFile);
 		HashMap<Integer, String> labelsMap = createMap(mappingFile);
 		
@@ -477,9 +498,6 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		for(int eid = 0; eid < totalEpochs; eid ++) {
 			ArrayList<LabelWeights[]> wtsChunk = new ArrayList<LabelWeights[]>();
 			for(int chunkid = 0; chunkid < numChunks; chunkid ++) {
-
-			    for(int i = 0; i < zWeights.length; i ++)
-				      zWeights[i].clear();
 				
 			    for(int i = 0; i < numRelations; i ++){
 			    	String line  = br.readLine();
