@@ -211,6 +211,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		for(int eid = 0; eid < totalEpochs; eid++){
 			for(int chunkid = 0; chunkid < numChunks; chunkid++){
 
+				ArrayList<Pair<String, String>> results = new ArrayList<Pair<String, String>>();
 				//NOTE ACCURACY CALCULATION FOR EID=eid and CHUNKID=chunkid
 
 				LabelWeights [] zWeights = new  LabelWeights[numRelations];
@@ -222,11 +223,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 			    	for(int j = 0; j < numSentenceFeatures; j++ ){
 			    		zWeights[i].weights[j] = zWeightsAll.get(eid).get(chunkid)[i].weights[j];
 			    	}
-			    }
-			
-				
-				ArrayList<Pair<String, String>> results = new ArrayList<Pair<String, String>>();
-				
+			    }	
 						
 				long start = System.currentTimeMillis();
 				long prevtime = start;
@@ -473,14 +470,16 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		
 		br.readLine(); // To read the '==' separator
 		
-		LabelWeights [] zWeights = new LabelWeights[numRelations];
-	    for(int i = 0; i < zWeights.length; i ++)
-		      zWeights[i] = new LabelWeights(numSentenceFeatures);
-		
 		for(int eid = 0; eid < totalEpochs; eid ++) {
-			ArrayList<LabelWeights[]> wtsChunk = new ArrayList<LabelWeights[]>();
+		    
+		    ArrayList<LabelWeights[]> wtsChunk = new ArrayList<LabelWeights[]>();
+			
 			for(int chunkid = 0; chunkid < numChunks; chunkid ++) {
-			    
+
+				LabelWeights [] zWeights = new LabelWeights[numRelations];
+			    for(int i = 0; i < zWeights.length; i ++)
+				      zWeights[i] = new LabelWeights(numSentenceFeatures);
+				
 			    for(int i = 0; i < numRelations; i ++){
 			    	String line  = br.readLine();
 			    	int j = 0;
