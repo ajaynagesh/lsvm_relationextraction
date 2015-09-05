@@ -204,11 +204,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		double weight = Double.parseDouble(args[3]);
 		
 		ArrayList<ArrayList<LabelWeights []>> zWeightsAll = initializeLabelWeightsOnline(parametersFile);
-		
-		LabelWeights [] zWeights = new  LabelWeights[numRelations];
-		for(int i = 0; i < zWeights.length; i ++)
-		      zWeights[i] = new LabelWeights(numSentenceFeatures);
-		
+				
 		ArrayList<DataItem> dataset = populateDataset(datasetFile);
 		HashMap<Integer, String> labelsMap = createMap(mappingFile);
 		
@@ -216,6 +212,10 @@ public class ClassifyStructEgAllOnlineIntermediate {
 			for(int chunkid = 0; chunkid < numChunks; chunkid++){
 
 				//NOTE ACCURACY CALCULATION FOR EID=eid and CHUNKID=chunkid
+
+				LabelWeights [] zWeights = new  LabelWeights[numRelations];
+				for(int i = 0; i < zWeights.length; i ++)
+				      zWeights[i] = new LabelWeights(numSentenceFeatures);
 				
 				// populate the weights of the current (eid,chunkid)
 				for(int i = 0; i < numRelations; i ++){
@@ -241,7 +241,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 					if(i % 10000 == 0){
 						long curtime = System.currentTimeMillis();
 						double timeTaken = (curtime - prevtime)/1000.0;
-						System.out.println("ClassifyStructEgAll: Finished processing " + i + " examples in " + timeTaken + " s.");	
+//						System.out.println("ClassifyStructEgAll: Finished processing " + i + " examples in " + timeTaken + " s.");	
 						prevtime = curtime;
 					}
 					
@@ -296,7 +296,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 								
 				long end = System.currentTimeMillis();
 				double totTime = (end - start) / 1000.0; 
-				System.out.println("ClassifyStructEgAll:: Total time taken for " + dataset.size() + " number of examples : " + totTime + " s.");
+//				System.out.println("ClassifyStructEgAll:: Total time taken for " + dataset.size() + " number of examples : " + totTime + " s.");
 				
 				RiedelEval(results, weight);
 				
@@ -338,8 +338,8 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		    }
 		    
 			//System.out.println("score: Correct : " + correct + "\nPredicted : " + predicted + "\nTotal : " + total);
-		    System.out.println("Nils = " + numNils + "\tNilsCorrect = " + numNilsCorrect);
-		    System.out.println("NilsPredAsNonNils = " + nilsPredAsNonNils + "\tNonNilsPredAsNils = " + nonNilPredAsNil);
+//		    System.out.println("Nils = " + numNils + "\tNilsCorrect = " + numNilsCorrect);
+//		    System.out.println("NilsPredAsNonNils = " + nilsPredAsNonNils + "\tNonNilsPredAsNils = " + nonNilPredAsNil);
 		    
 		    double p = (double) correct / (double) predicted;
 		    double r = (double) correct / (double) total;
@@ -349,8 +349,8 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		    		((double) 1 ) / (weight/p + (1-weight)/r) // The new weighted F score 
 		    		: 0);
 		    
-		    System.out.println("Weight\t" + weight + "\tFw\t" + wt_f1);
-			System.out.println("Precision\tRecall\tF1\tFw");
+//		    System.out.println("Weight\t" + weight + "\tFw\t" + wt_f1);
+//			System.out.println("Precision\tRecall\tF1\tFw");
 			Triple<Double, Double, Double> score = new Triple<Double, Double, Double>(p, r, f1);
 			System.out.println(score.first() + "\t" + score.second() + "\t" + score.third() + "\t" + wt_f1);
 		    return score;
@@ -498,7 +498,10 @@ public class ClassifyStructEgAllOnlineIntermediate {
 			WtsAllEpochsAllChunks.add(wtsChunk);
 		}
 		
-	    assert(br.readLine() == null);
+	    if(br.readLine() != null)
+	    	System.out.println("ERROR: End of file not reached! Pls check the file reading code");
+	    else
+	    	System.out.println("Correctly read the parameters file!");
 	    
 	    br.close();
 	    
