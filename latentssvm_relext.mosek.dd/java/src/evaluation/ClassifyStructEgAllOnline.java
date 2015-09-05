@@ -395,7 +395,11 @@ public class ClassifyStructEgAllOnline {
 			WtsAllEpochsAllChunks.add(wtsChunk);
 		}
 		
-	    assert(br.readLine() == null);
+		 if(br.readLine() != null)
+			 System.out.println("Something is wrong");
+		 else
+			 System.out.println("Model File reading is complete");
+
 	    
 	    br.close();
 	    
