@@ -208,7 +208,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(parametersFile+".redump")));
 		bw.write(totalEpochs+"\n");
 		bw.write(numChunks+"\n");
-		bw.write(numRelations+"\n");
+		bw.write(numRelations-1+"\n");
 		bw.write(numSentenceFeatures+"\n");
 		bw.write("==\n");
 		for (int eid = 0; eid < totalEpochs; eid++){
@@ -217,7 +217,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 					for(int j = 0; j < numSentenceFeatures; j++ ){
 						bw.write(zWeightsAll.get(eid).get(chunkid)[i].weights[j]+" ");
 					}
-					
+					bw.write("\n");
 				}
 				bw.write("--\n");
 			}
