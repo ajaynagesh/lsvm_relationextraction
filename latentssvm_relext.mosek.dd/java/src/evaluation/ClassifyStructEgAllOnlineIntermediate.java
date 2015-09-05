@@ -280,7 +280,7 @@ public class ClassifyStructEgAllOnlineIntermediate {
 						/* Print the relation labels (ybar) to file and their scores*/
 						for(int y : ylabelsPredictedScores.keySet()){
 							String labelStr = labelsMap.get(y);
-							predictedLabel += labelStr + " ";
+							predictedLabel += labelStr + ":"+ ylabelsPredictedScores.getCount(y) + " ";
 						}
 					}
 					
