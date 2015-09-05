@@ -491,13 +491,13 @@ public class ClassifyStructEgAllOnlineIntermediate {
 		
 		br.readLine(); // To read the '==' separator
 		
-		LabelWeights [] zWeights = new LabelWeights[numRelations];
-	    for(int i = 0; i < zWeights.length; i ++)
-		      zWeights[i] = new LabelWeights(numSentenceFeatures);
-		
 		for(int eid = 0; eid < totalEpochs; eid ++) {
 			ArrayList<LabelWeights[]> wtsChunk = new ArrayList<LabelWeights[]>();
 			for(int chunkid = 0; chunkid < numChunks; chunkid ++) {
+				
+				LabelWeights [] zWeights = new LabelWeights[numRelations];
+			    for(int i = 0; i < zWeights.length; i ++)
+				      zWeights[i] = new LabelWeights(numSentenceFeatures);
 				
 			    for(int i = 0; i < numRelations; i ++){
 			    	String line  = br.readLine();
